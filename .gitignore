@@ -1,0 +1,16 @@
+# 临时/本地产物
+*.backup-*
+*.bak
+shots/
+
+# 不发布的大体积或含隐私的原始材料（保留在本地）
+1401/
+src/
+*.tar.gz
+*.dmg
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+System Volume Information/
