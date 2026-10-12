@@ -3,11 +3,11 @@
 > 用 [NullMoth NVIDIA 驱动](https://github.com/nullmoth/nvidia-macos-driver) 在 **RTX 4050 Laptop** 上跑起硬件加速的 macOS 15 Sequoia。
 > 本仓库记录这台具体机型的完整踩坑过程、已验证配置、真实引导日志与排错脚本。
 >
-> **状态：进行中（未安装完成）。** 第一轮受控实验**已成功**：证明并修好了"`boot-args` 从未生效"
-> 这个把此前所有结论都污染掉的问题（`npci=0x2000` 现已真正进入内核）。
-> 当前屏幕停在 AMD I2C 控制器（`AMDI0010`）驱动的 `start()`，第二轮（禁用 VoodooI2C 家族）
-> **已写入卡上、待引导验证** —— 见 [受控实验记录](docs/05-受控实验记录.md) 与
-> [引导排错实录](docs/03-引导排错实录.md)。
+> **状态：进行中（未安装完成）。** 第一轮修好了"`boot-args` 从未生效"这个把此前所有结论都
+> 污染掉的问题（`npci=0x2000` 已真正进入内核）；第二轮（禁用 VoodooI2C 家族）已执行，
+> 六项预注册检查**全部符合预期**。屏幕最后停在 `PCI configuration begin`，但**没有停留时长**，
+> 因此**尚不能**判定为永久卡死。第三轮（只移除 `npci=0x2000`）已准备、**待批准** ——
+> 见 [受控实验记录](docs/05-受控实验记录.md) 与 [引导排错实录](docs/03-引导排错实录.md)。
 
 ---
 
@@ -148,6 +148,33 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 **写入结果**：`08781B25C755B1B5…`（52137 B，`ocvalidate` 0 issues，SMBIOS 原样保留，
 其余段落逐字节未变）。回滚：`D:\_backup-round0\config.plist.round1`。
 
+**实测结果**（`logs/opencore-2026-10-13-020808.txt`）：六项**全部符合预期** ——
+`MBA:OUT` 仍含 `npci=0x2000`；`OCABC` 与 Round 1 逐字相同；`Prelinked status - Success`；
+四个 VoodooI2C kext **各 0 条注入**；独立 `VoodooInput` 成功注入（且只有一份）；
+无 panic 文件、无新错误。截图停在 `PCI configuration begin`，但**无停留时长**，见 §6。
+
+### 6. 第三轮（已准备，待批准）：只移除 `npci=0x2000`
+
+**为什么它是干净的单一变量**：Apple 自己的 `IOPCIFamily` 源码里
+`npci=` 是 `pci=` 的**取反**（`gIOPCIFlags &= ~debug`），而 `kIOPCIConfiguratorPFM64 = 0x2000`
+**默认是置位的** —— 所以 `npci=0x2000` 等于**清掉 macOS 自带的 64 位 MMIO 映射能力**
+（不补合成 64 位窗口、且收回 64 位 BAR 的地址上限）。
+
+而本机的实测事实是：**Above 4G Decoding 已启用**（GPU 的 BAR 被固件放在 `0x7E00000000` ≈ 504 GiB，
+不是靠 BAR1 大小推的）、**BAR1 = 8 GiB ReBAR**（已超出 macOS 1 GB 的理论上限，靠
+`ResizeAppleGpuBars=0` 缩到 64 MB 才能用）。⇒ 在这台机器上清掉 PFM64 只会**减少**分配余地。
+
+同时 `docs/03` 那句"加 npci 就越过了 `PCI configuration begin`"**已被证伪**：
+第 2、3 次引导是在 `MBA:OUT` 里**根本没有 npci** 的情况下越过该阶段的。
+
+**改动：相对卡上 Round 2 只有 1 行**（删掉 `boot-args` 末尾的 ` npci=0x2000`），
+`Booter.Quirks` / AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 全部逐字节不变，
+`NVRAM → Delete` 里**继续保留 `boot-args`**。候选已发布供评审：
+[`efi/candidates/round3-drop-npci.plist`](efi/candidates/round3-drop-npci.plist)（`ocvalidate` 0 issues）。
+
+> **不**替换成 `npci=0x3000`，**不**改 BIOS，**不**动 IOMMU。详见
+> [受控实验记录](docs/05-受控实验记录.md) §6（含判定标准与回滚）。
+
 ---
 
 ## 快速上手
@@ -204,8 +231,9 @@ docs/05-受控实验记录.md            ★ 当前在测什么：实验设计�
 hardware/本机配置摘要.md           脱敏后的硬件清单
 efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
 efi/README.md                    kext 清单与用 1401 重建的方法
-logs/opencore-*.txt              5 份真实 OpenCore 引导日志（已脱敏）
+logs/opencore-*.txt              6 份真实 OpenCore 引导日志（已脱敏）
 logs/bootfix-findings.md         1401 诊断器对这些日志的判定
+efi/candidates/                  尚未写入卡上的候选方案（评审用；规则见其 README）
 scripts/sanitize-config.py       把卡上配置脱敏后搬进仓库（字节级保真）
 scripts/scrub-log.py             清洗引导日志里的身份值（含 UUID 字节序反转形式、磁盘序列号）
 scripts/sync-to-github.ps1       ★ 一键同步：双重脱敏 → ocvalidate → 泄漏扫描 → push → 远端复核
