@@ -5,8 +5,9 @@
 >
 > **状态：进行中（未安装完成）。** 第一轮受控实验**已成功**：证明并修好了"`boot-args` 从未生效"
 > 这个把此前所有结论都污染掉的问题（`npci=0x2000` 现已真正进入内核）。
-> 当前屏幕停在 AMD I2C 控制器（`AMDI0010`）驱动的 `start()`，第二轮准备隔离 VoodooI2C 家族 ——
-> 见 [受控实验记录](docs/05-受控实验记录.md) 与 [引导排错实录](docs/03-引导排错实录.md)。
+> 当前屏幕停在 AMD I2C 控制器（`AMDI0010`）驱动的 `start()`，第二轮（禁用 VoodooI2C 家族）
+> **已写入卡上、待引导验证** —— 见 [受控实验记录](docs/05-受控实验记录.md) 与
+> [引导排错实录](docs/03-引导排错实录.md)。
 
 ---
 
@@ -132,7 +133,7 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 （`DEVMMIO 1 / VMAP 1 / WRUNPROT 1 / RBMAP 0 / RTPERMS 0`），
 `OC: Prelinked status - Success`，且仓库配置经脱敏后与卡上**逐字节相同**。
 
-### 5. 第二轮（当前）：隔离 AMD I2C（AMDI0010）控制器
+### 5. 第二轮（已写入卡上，待引导验证）：隔离 AMD I2C（AMDI0010）控制器
 
 屏幕最后一行停在 `VoodooI2C…Controller::AMDI0010 Starting I2C controller`。
 经 DSDT 反编译确认，**触摸板正是挂在 `\_SB.I2CA`（`_HID = AMDI0010`）上**，
@@ -143,6 +144,9 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 `VoodooInput` 保留启用（它与 I2C bundle 无加载依赖，且 `VoodooPS2Trackpad` 运行时需要它），
 `VoodooPS2Controller` 一族全部保留。详见
 [受控实验记录](docs/05-受控实验记录.md) 第 4 节（含依赖闭包证明与判定标准）。
+
+**写入结果**：`08781B25C755B1B5…`（52137 B，`ocvalidate` 0 issues，SMBIOS 原样保留，
+其余段落逐字节未变）。回滚：`D:\_backup-round0\config.plist.round1`。
 
 ---
 
