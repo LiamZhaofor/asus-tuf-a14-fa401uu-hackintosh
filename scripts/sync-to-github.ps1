@@ -138,6 +138,14 @@ if ($secrets.ContainsKey('SystemUUID')) {
                                               $sw.Substring(20,12))
             $secrets['SystemUUID-tail'] = $sw.Substring(20,12)
         }
+        # Partial disclosure counts too: an 8-char field of the GUID is still real data.
+        # (Tiny chance of a false positive inside a log's hex dump; the failure mode is
+        #  "refuse to publish", which is the safe direction.)
+        $plain = $secrets['SystemUUID'].Replace('-','').ToUpper()
+        if ($plain.Length -eq 32) {
+            $secrets['SystemUUID-prefix']        = $plain.Substring(0,8)
+            $secrets['SystemUUID-swapped-prefix'] = $sw.Substring(0,8)
+        }
     } catch { }
 }
 
