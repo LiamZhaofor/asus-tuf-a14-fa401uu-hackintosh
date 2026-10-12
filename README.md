@@ -3,7 +3,8 @@
 > 用 [NullMoth NVIDIA 驱动](https://github.com/nullmoth/nvidia-macos-driver) 在 **RTX 4050 Laptop** 上跑起硬件加速的 macOS 15 Sequoia。
 > 本仓库记录这台具体机型的完整踩坑过程、已验证配置、真实引导日志与排错脚本。
 >
-> **状态：进行中（未安装完成）。** 引导已进入 macOS 内核，正在逐个试 booter 内存映射 quirk —— 见 [引导排错实录](docs/03-引导排错实录.md)。
+> **状态：进行中（未安装完成）。** 已定位到一个被长期掩盖的实测条件污染问题并开始受控实验 ——
+> 见 [受控实验记录](docs/05-受控实验记录.md)（当前：第一轮待引导）与 [引导排错实录](docs/03-引导排错实录.md)。
 
 ---
 
@@ -33,19 +34,21 @@
 | 项目 | 结果 | 证据 |
 |---|---|---|
 | U 盘 OpenCore 引导 | ✅ | MBR + active FAT32，走 `\EFI\BOOT\BOOTX64.EFI`，实机启动成功 |
-| OpenCore 配置合法性 | ✅ | 官方 `ocvalidate` 1.0.9：**0 issues** |
+| OpenCore 配置合法性 | ✅ | 官方 `ocvalidate` 1.0.9：**0 issues**（与 U 盘上 `DBG-109` 同版本） |
 | boot.efi 交接 | ✅ | 日志出现 `AAPL: #[EB|LOG:EXITBS:START]` |
-| macOS 内核启动 | ✅ | 见 [排错实录](docs/03-引导排错实录.md) 的屏幕记录 |
-| kext 加载 | ✅ | VoodooI2C / VoodooPS2 / VirtualSMC / WhateverGreen 等均加载 |
-| AMD 内核补丁 | ✅ | 日志：`IOPCIFamily (CaseySJ probeBusGated) ... Success` |
+| macOS 内核启动 | ✅ | `AppleACPICPU ×16`、`IOAPIC`、`ACPI: Executed 29 blocks`、`RTC:` 均已在屏幕上出现 |
+| kext 加载 | ✅ | 25 个 kext 全部 `Prelinked injection … Success`，`OC: Prelinked status - Success` |
+| AMD 内核补丁 | ✅ | 27 条全部命中；核心数补丁确认为 **8 核**；Zen4 IOPCIFamily 与 Sequoia PAT 补丁版本门控正确 |
+| `boot-args` 实际生效 | ❌ | **从未生效过** —— 见下方"卡点 2"，这是当前第一轮实验要修的东西 |
 | 内屏由 N 卡驱动 | ✅ | 官方扫描工具的输出 |
-| 安装 macOS | ⬜ | 当前卡在内核早期，见下 |
+| 安装 macOS | ⬜ | 当前卡在内核早期（`RTC:` 之后），见下 |
 
 ---
 
-## 三个卡点与它们的解法
+## 卡点与解法（含两处勘误）
 
-完整证据（日志行 + 源码依据）见 **[docs/03-引导排错实录.md](docs/03-引导排错实录.md)**。
+完整证据（日志行 + 上游源码行号）见 **[docs/03-引导排错实录.md](docs/03-引导排错实录.md)**；
+每一步改动的实验设计与回滚见 **[docs/05-受控实验记录.md](docs/05-受控实验记录.md)**。
 
 ### 1. 选择器停在 `Timeout` —— 其实只是慢，不是死机
 
@@ -56,36 +59,80 @@
 10:021 00:010 OCB: Should boot from 1. 1401 (T:4|F:1|G:0|E:1|DEF:0)
 ```
 
-真正的"卡"是 `DmgLoading = Signed` 触发的 **DMG 分块校验**（85 个分块 / 847 MiB 的 SHA-256）。
-这段路径**按设计没有任何日志输出**（[`DmgBootSupport.c`](https://github.com/acidanthera/OpenCorePkg) 里每个*失败*分支才打日志），
-所以看起来像死机，其实在算。**等 1–2 分钟就过去了**，或者把 `Misc → Security → DmgLoading` 设为 `Any` 直接跳过。
+真正的"卡"是 [DMG 分块校验](https://github.com/acidanthera/OpenCorePkg)（85 个分块 / 847 MiB 的 SHA-256）。
+`DmgBootSupport.c` 里每个*失败*分支才打日志，**成功路径按设计完全静默**，所以看起来像死机，
+其实在算 —— 实测这段要 **27.45 秒**（U 盘只有 38.9 MB/s）。
+**等 1–2 分钟就过去了**，或者把 `Misc → Security → DmgLoading` 设为 `Any` 直接跳过。
 
-### 2. `PCI configuration begin` —— `npci=0x2000`
+> 我们第一份日志（`logs/opencore-2026-10-12-233441.txt`）就是**死在这一段**的，
+> 它只有 43 KB、没有 `AAPL:` 行、`boot.efi` 从未启动。**别把它当成一次"引导失败"。**
+
+### 2. `PCI configuration begin` → `npci=0x2000` **其实从来没有生效**
+
+第一次我们加了 `npci=0x2000` 并认为"越过了"。**这个归因是错的。**
+
+四份日志一起看：**在所有有日志的引导里，内核拿到的 `boot-args` 里都没有 `npci=0x2000`。**
 
 ```
-PCI configuration begin
-IOPCIConfigurator::configure() PCI configuration PCI0
+OCVAR: Setting NVRAM 7C436110-...:boot-args - ignored, exists
+AAPL: #[EB|MBA:NV]  <"-v debug=0x100 ... ipc_control_port_options=0 slide=246">
+AAPL: #[EB|MBA:OUT] <"-v debug=0x100 ... ipc_control_port_options=0 slide=246">
 ```
 
-1401 的 `bootfix.py` 里对这两行字有**逐字对应**的规则（它的自测用例就是 `"[IOPCIConfigurator::configure()] PCI configuration PCI0"`）：
+原因是 OpenCore 的机制（`OpenCoreNvram.c`）：`OcDeleteNvram()` 先跑、`OcAddNvram()` 后跑，
+而 `OcAddNvram` **硬编码 `Overwrite = FALSE`** —— 变量已存在就只打印 `ignored, exists`，不写。
+唯一能清掉它的是 `Delete` 阶段，而当时 `Delete` 里**没有 `boot-args`**。
+→ 变量被第一次引导写入的值永久冻住了。
 
-```python
-# Dortania troubleshooting, "Stuck on [PCI configuration begin]": npci=0x2000, then npci=0x3000
+**教训：判断"配置是否生效"必须看日志里的 `OCABC:` / `OCVAR:` / `AAPL: #[EB|MBA:OUT]`，
+而不是看 `config.plist` 写了什么。** 详见 [排错实录](docs/03-引导排错实录.md) 第 2 节。
+
+### 3. 内核跑得很远，然后停住 —— booter 内存映射 quirk（进行中）
+
+内核推进得很深，最后几行（照片裁切放大后读取）：
+
+```
+AppleACPICPU: ProcessorId=0..15 ... Enabled
+IOAPIC: Version 0x21 Vectors 64:87
+ACPI: Executed 29 blocks of module-level executable AML code
+ACPI: sleep states S4 S5
+RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 ```
 
-加 `npci=0x2000` 后 **确实越过了**。
+1401 的 `bootfix` 诊断器把它判为 "AMD hand-off 情形"并逐档改配置：
 
-### 3. 内核早期停住 —— booter 内存映射 quirk（进行中）
-
-越过 PCI 枚举后内核跑得很远：ACPI 表解析完、16 个 CPU 全部启用、IOAPIC 与 RTC 初始化，
-最后一行是 `RTC: Only single RAM bank (128 bytes)`。
-
-把 U 盘上 4 份真实日志喂给 1401 自己的 `bootfix` 诊断器，它判定为 AMD hand-off 情形并按阶梯改配置：
-
-| 档位 | 规则 | 改动 | 结果 |
+| 档位 | 规则 | 改动 | 实际结果 |
 |---|---|---|---|
-| 第一档 | `bootlog-amd-exitbs` | `RebuildAppleMemoryMap=False`、`EnableWriteUnprotector=True`、`SyncRuntimePermissions=False` | ❌ 仍停 |
-| 第二档 | `bootlog-handoff-devirt` | 保留上组，`DevirtualiseMmio=False` | ⬜ **当前状态，待验证** |
+| 第一档 | `bootlog-amd-exitbs` | `RebuildAppleMemoryMap=False`、`EnableWriteUnprotector=True`、`SyncRuntimePermissions=False` | ❌ 仍停（第 4 次引导） |
+| 第二档 | `bootlog-handoff-devirt` | 保留上组，`DevirtualiseMmio=False` | ⬜ **从未引导过 → 已在第一轮主动撤下** |
+
+> **勘误**：这一档的触发前提是"内核从未打印"（`bootfix.py` 第 156–158 行注释：
+> *"the screen freezes on EXITBS:START, the kernel never prints"*）。
+> 但屏幕照片证明**内核已经跑起来了** —— 上面那些行全是 ExitBootServices **之后**的输出。
+> **所以第一档放弃 Dortania MAT 组合的理由对这台机器不成立。**
+> 详见 [受控实验记录](docs/05-受控实验记录.md) 的 D3。
+
+### 4. 当前第一轮：先把实测条件弄干净
+
+`npci` 从未生效，意味着此前所有"某改动有效/无效"的结论都不可靠。
+所以第一轮**只做一件事**：把 `boot-args` 加入 `NVRAM → Delete`，让那个写了很久的
+`npci=0x2000` **第一次真正进入内核**，同时把未实测的第二档撤回实测基线。
+
+相对基线的 diff **只有 1 行**（详见 [受控实验记录](docs/05-受控实验记录.md) 第 3 节）：
+
+```diff
+ 				<string>ForceDisplayRotationInEFI</string>
+ 				<string>csr-active-config</string>
++				<string>boot-args</string>
+```
+
+**成功判据**（引导后 1 秒内即可确定）：
+
+```
+OC: Deleting NVRAM 7C436110-...:boot-args - Success
+OCVAR: Setting NVRAM 7C436110-...:boot-args - Success
+```
+且 `MBA:OUT` 出现 `npci=0x2000`。
 
 ---
 
@@ -103,19 +150,25 @@ IOPCIConfigurator::configure() PCI configuration PCI0
 ### 本项目已验证的配置改动（叠加在 1401 的构建结果上）
 
 ```
+NVRAM.Delete[7C436110-...]     += boot-args   ← 第一轮：让下面的 boot-args 真正生效
 boot-args    ... npci=0x2000
 Misc.Security.DmgLoading              = Any          （跳过慢速 DMG 校验）
-Booter.Quirks.DevirtualiseMmio        = False        ← 第二档，待验证
+Booter.Quirks.DevirtualiseMmio        = True         （= 最后一次实测值；曾误设 False，未验证）
 Booter.Quirks.SetupVirtualMap         = True
 Booter.Quirks.RebuildAppleMemoryMap   = False
 Booter.Quirks.EnableWriteUnprotector  = True
 Booter.Quirks.SyncRuntimePermissions  = False
 Booter.Quirks.ResizeAppleGpuBars      = 0            （安装器专用，N 卡大 BAR 会顶掉固件帧缓冲）
-UEFI.Quirks.ResizeGpuBars             = -1
+Booter.Quirks.ResizeGpuBars           = 缺省(-1)     （不改 BAR）
+Kernel.Quirks.ProvideCurrentCpuInfo   = True
 Kernel.Add                            26 个 kext（含注入的 HoRNDIS，见下）
 ```
 
-`efi/config.plist` 是**已验证可引导**的那份配置（SMBIOS 身份字段已抹除，见下）。
+`efi/config.plist` 是**与卡上完全一致**的那份配置（只抹除了 SMBIOS 身份字段，见下）。
+
+> ⚠️ 注意 `NVRAM → Delete` 的一个设计行为：当变量**同时在 `Delete` 和 `Add`** 里，
+> OpenCore 会比较二者内容，**相同就不删**（打印 `Not deleting NVRAM … matches add`）以保护 Flash 寿命。
+> 所以正确的值稳定之后，日志反而会一直显示 `ignored, exists` —— 那是**证明值正确**，不是没生效。
 
 ### 安装期的联网（本机特有难点）
 
@@ -128,26 +181,47 @@ Kernel.Add                            26 个 kext（含注入的 HoRNDIS，见�
 ## 仓库结构
 
 ```
-README.md                     本文件
-docs/01-可行性评估.md          项目可行性、硬件逐项判定、已知风险
-docs/02-安装手册.md            完整操作手册（BIOS/分区/驱动安装/风险对策）
-docs/03-引导排错实录.md         ★ 每次引导卡死的证据、根因、解法
-docs/04-驱动核对.md            kext 逐个审计（版本/架构/顺序/依赖）
-hardware/本机配置摘要.md        脱敏后的硬件清单
-efi/config.plist              已验证配置（SMBIOS 身份已抹除）
-efi/README.md                 kext 清单与用 1401 重建的方法
-logs/opencore-*.txt           4 份真实 OpenCore 引导日志（已脱敏）
-logs/bootfix-findings.md      1401 诊断器对这些日志的判定
-scripts/read-screen-photo.py  把手机拍的启动画面裁切放大以读清文字
-scripts/patch-stick-config.py 免提权、直接改 U 盘上 config.plist 的小工具
+README.md                        本文件
+docs/01-可行性评估.md             项目可行性、硬件逐项判定、已知风险
+docs/02-安装手册.md               完整操作手册（BIOS/分区/驱动安装/风险对策）
+docs/03-引导排错实录.md            ★ 每次引导卡死的证据、根因、解法（含勘误）
+docs/04-驱动核对.md               kext 逐个审计（版本/架构/顺序/依赖）
+docs/05-受控实验记录.md            ★ 当前在测什么：实验设计、精确 diff、判据、回滚
+hardware/本机配置摘要.md           脱敏后的硬件清单
+efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
+efi/README.md                    kext 清单与用 1401 重建的方法
+logs/opencore-*.txt              4 份真实 OpenCore 引导日志（已脱敏）
+logs/bootfix-findings.md         1401 诊断器对这些日志的判定
+scripts/sanitize-config.py       把卡上配置脱敏后搬进仓库（字节级保真）
+scripts/sync-to-github.ps1       ★ 一键同步：脱敏 → ocvalidate → 泄漏扫描 → push → 远端复核
+scripts/read-screen-photo.py     把手机拍的启动画面裁切放大以读清文字
+scripts/patch-stick-config.py    免提权、直接改 U 盘上 config.plist 的小工具
 scripts/rewrite-stick-as-admin.cmd  提权重写 U 盘的模板脚本
 ```
 
+### 每次修改后同步到 GitHub
+
+仓库必须**始终反映卡上真实状态**，否则"仓库配置 ≠ 实测配置"这个坑会再次出现。固定流程：
+
+```powershell
+.\scripts\sync-to-github.ps1 -Message "round1: ..."
+```
+
+它会依次执行：**脱敏**（把卡上 `D:\EFI\OC\config.plist` 的 4 个身份字段置零后写入 `efi/config.plist`，
+其余字节原样保留，所以 diff 只显示真实改动）→ **`ocvalidate`**（版本不符或报错就拒绝发布）→
+**泄漏扫描**（从卡上读出**真实**的序列号/MLB/UUID/ROM/MAC，在整仓搜索；同时拒绝 `Report.json`、
+`*.aml`、`*.bin`、`>1MB` 的文件）→ **push** → **把远端内容拉回来再扫一遍**。
+
+---
+
 ## 隐私说明
 
-公开前已抹除：SMBIOS `SystemSerialNumber` / `MLB` / `SystemUUID` / `ROM`、
-原始扫描报告（含网卡 MAC 与磁盘序列号）**未收录**、日志中的磁盘序列号。
-**直接使用 `efi/config.plist` 前请用自己的序列号**（用 1401 重新生成即可），不要照抄示例里的占位值。
+公开前已抹除：SMBIOS `SystemSerialNumber` / `MLB` / `SystemUUID` / `ROM`。
+原始扫描报告（含网卡 MAC 与磁盘序列号）与 ACPI 转储**未收录**。
+`scripts/sanitize-config.py` 与 `scripts/sync-to-github.ps1` 会在发布前自动完成脱敏与扫描，
+任一身份字段找不到就直接失败退出。
+
+**直接使用 `efi/config.plist` 前请换成自己的序列号**（用 1401 重新生成即可），不要照抄示例里的占位值。
 
 ## 许可与致谢
 

@@ -13,8 +13,15 @@ no_slide           : False      # 没有 "No slide values are usable" → KASLR 
 devirt_ran         : True       # 日志里有 OCABC: MMIO devirt 行
 vmap               : True
 mmio               : 5 个区域
-boots              : 3 次完整引导
+boots              : 3 次（logs/ 有 4 份日志，但只有 3 份跑到了 EXITBS）
 ```
+
+> **一个值得记下来的盲区：`findings()` 完全不检查 `boot-args` 是否真的生效。**
+> 它只看 `EXITBS` / `STOP 0x16` / `MMIO devirt` / slide 这些线索，
+> 而 `OCVAR: …boot-args - ignored, exists` 和 `AAPL: #[EB|MBA:OUT]` 都没被读。
+> 结果就是：配置里写着 `npci=0x2000`、日志里明明白白写着它被忽略，
+> 诊断器却一路认为"配置已经应用了" —— 这个盲区让一个失效的 boot-arg 藏了好几次引导。
+> **复查任何一轮时，`OCVAR:` 与 `MBA:OUT` 必须单独核对。**
 
 ## 每次引导的判定
 
@@ -37,13 +44,49 @@ boots              : 3 次完整引导
 
 | 档位 | 规则名 | 改动 | 结果 |
 |---|---|---|---|
-| 1 | `bootlog-amd-exitbs` | `RebuildAppleMemoryMap=False`、`EnableWriteUnprotector=True`、`SyncRuntimePermissions=False`（`DevirtualiseMmio`/`SetupVirtualMap` 保持 True） | 第 3 次引导（`wrunprot=True`）仍停住 |
-| 2 | `bootlog-handoff-devirt` | 保留上组，`DevirtualiseMmio` 翻为 `False` | 待验证 |
+| 1 | `bootlog-amd-exitbs` | `RebuildAppleMemoryMap=False`、`EnableWriteUnprotector=True`、`SyncRuntimePermissions=False`（`DevirtualiseMmio`/`SetupVirtualMap` 保持 True） | 第 4 次引导（`wrunprot=1`）仍停住 |
+| 2 | `bootlog-handoff-devirt` | 保留上组，`DevirtualiseMmio` 翻为 `False` | **从未引导过 → 已在第一轮主动撤下** |
 
 第一档的源码注释记录了一模一样的先例：
 
 > *"measured on a Ryzen 5 5500 / B550 (10-09): it hung with the default, got past with the MMIO pair,
 > then panicked (type 14) until the write-unprotector pair was on. **All five change together.**"*
+
+### ⚠️ 这份判定有两条必须一起读的更正
+
+**更正 1：`findings()` 只收了 3 次引导，但 `logs/` 里有 4 份日志。**
+`logs/opencore-2026-10-12-233441.txt` **没有 `EXITBS:START`**（它只有 43 KB，最后一行是
+`OCB: Found chunklist BaseSystem.chunklist …`，即卡在 DMG 分块校验里、**`boot.efi` 从未启动**），
+所以 `_boot()` 直接返回 `None`，不计入 `boots`。**"4 份日志"不等于"4 次引导"。**
+
+**更正 2：`handoff_stuck()` 的判据前提在本机不成立。**
+判据（`bootfix.py` 第 38–51 行）是"用户说卡在 EXITBS"**或**"安装器引导 ≥ 2 次且从未出现 macOS 卷"。
+它推断的是 *"the screen freezes on EXITBS:START, **the kernel never prints**"*（第 156–158 行）。
+但屏幕照片证明**内核已经跑起来了**：
+
+```
+AppleACPICPU: ProcessorId=0..15 ... Enabled
+IOAPIC: Version 0x21 Vectors 64:87 / 88:111
+ACPI: Executed 29 blocks of module-level executable AML code
+ACPI: sleep states S4 S5
+RTC: Only single RAM bank (128 bytes)          ← 最后一行
+```
+
+这些全是 ExitBootServices **之后**的内核输出（内核消息不会落进 OpenCore 的日志，所以"日志止于
+`EXITBS:START`"和"屏幕还在滚"是同时成立的，两者不矛盾）。**因此第一档放弃 Dortania MAT 组合的
+理由不成立** —— 而且本机 `OCABC: MAT support is 1`（固件**有** MAT），Dortania 给"无 MAT"组合的
+唯一前提就是固件缺 MAT。
+
+另需注意：`handoff_stuck()` **在当前 1.14.2 源码中确实存在**（第 38 行定义、第 165 行调用），
+不是历史遗留规则 —— 问题在于它的前提，不在于它的存在。
+
+### 还缺什么才能定论
+
+`RTC:` 之后**停在哪里**目前无从判断：内核输出不落盘，照片又只是裁切片段。要真正定位，需要
+**一张全屏照片**，或（更好）**串口 / USB 调试日志**。在此之前，任何"死在某个具体子系统"的说法
+都只是猜测。
+
+→ 当前处置与判据见 [受控实验记录](../docs/05-受控实验记录.md)。
 
 ## MMIO 区域（DevirtualiseMmio 打开时 OpenCore 会逐条列出）
 

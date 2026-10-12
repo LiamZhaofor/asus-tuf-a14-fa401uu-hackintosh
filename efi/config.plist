@@ -168,7 +168,7 @@
 			<key>ClearTaskSwitchBit</key>
 			<false/>
 			<key>DevirtualiseMmio</key>
-			<false/>
+			<true/>
 			<key>DisableSingleUser</key>
 			<false/>
 			<key>DisableVariableWrite</key>
@@ -1946,6 +1946,7 @@
 			<array>
 				<string>ForceDisplayRotationInEFI</string>
 				<string>csr-active-config</string>
+				<string>boot-args</string>
 			</array>
 		</dict>
 		<key>LegacyOverwrite</key>
