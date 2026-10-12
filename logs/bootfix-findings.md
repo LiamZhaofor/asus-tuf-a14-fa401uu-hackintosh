@@ -117,3 +117,23 @@ PY
 ```
 
 > 注意 `bootfix.findings()` 需要 `p1401` 包（来自 1401 的发行包）。
+
+---
+
+## 追加：第 5 份日志（`opencore-2026-10-13-011110.txt`）
+
+第一轮修复后产生了第 5 份日志，它也跑到了 `EXITBS:START`，所以现在 `findings()["boots"]`
+是 **4 次**（不是 3 次）。关键差异是 **`boot-args` 第一次真正生效**：
+
+```
+00:231  OC: Deleting NVRAM 7C436110-…:boot-args - Success
+00:280  OCVAR: Setting NVRAM 7C436110-…:boot-args - Success
+15:255  AAPL: #[EB|MBA:OUT] <"… ipc_control_port_options=0 npci=0x2000 slide=159">
+```
+
+`OCABC:` 显示本轮真正生效的 quirk 与第 4 次引导一致
+（`DEVMMIO 1 … WRUNPROT 1` / `RBMAP 0 VMAP 1 RTPERMS 0`），即对照基线没有被破坏。
+
+**因此 `findings()` 的输出含义在跨轮比较时必须重新解释**：前 4 份日志里有 3 次是在
+`npci` 完全没生效的条件下跑出来的，"某组 quirk 失败"这类结论对它们不成立。
+详见 [受控实验记录](../docs/05-受控实验记录.md)。

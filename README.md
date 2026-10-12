@@ -3,8 +3,10 @@
 > 用 [NullMoth NVIDIA 驱动](https://github.com/nullmoth/nvidia-macos-driver) 在 **RTX 4050 Laptop** 上跑起硬件加速的 macOS 15 Sequoia。
 > 本仓库记录这台具体机型的完整踩坑过程、已验证配置、真实引导日志与排错脚本。
 >
-> **状态：进行中（未安装完成）。** 已定位到一个被长期掩盖的实测条件污染问题并开始受控实验 ——
-> 见 [受控实验记录](docs/05-受控实验记录.md)（当前：第一轮待引导）与 [引导排错实录](docs/03-引导排错实录.md)。
+> **状态：进行中（未安装完成）。** 第一轮受控实验**已成功**：证明并修好了"`boot-args` 从未生效"
+> 这个把此前所有结论都污染掉的问题（`npci=0x2000` 现已真正进入内核）。
+> 当前屏幕停在 AMD I2C 控制器（`AMDI0010`）驱动的 `start()`，第二轮准备隔离 VoodooI2C 家族 ——
+> 见 [受控实验记录](docs/05-受控实验记录.md) 与 [引导排错实录](docs/03-引导排错实录.md)。
 
 ---
 
@@ -39,9 +41,9 @@
 | macOS 内核启动 | ✅ | `AppleACPICPU ×16`、`IOAPIC`、`ACPI: Executed 29 blocks`、`RTC:` 均已在屏幕上出现 |
 | kext 加载 | ✅ | 25 个 kext 全部 `Prelinked injection … Success`，`OC: Prelinked status - Success` |
 | AMD 内核补丁 | ✅ | 27 条全部命中；核心数补丁确认为 **8 核**；Zen4 IOPCIFamily 与 Sequoia PAT 补丁版本门控正确 |
-| `boot-args` 实际生效 | ❌ | **从未生效过** —— 见下方"卡点 2"，这是当前第一轮实验要修的东西 |
+| `boot-args` 实际生效 | ✅ | 第一轮修复后：`OC: Deleting NVRAM …:boot-args - Success` → `OCVAR: Setting NVRAM …:boot-args - Success`，且 `MBA:OUT` 含 `npci=0x2000` |
 | 内屏由 N 卡驱动 | ✅ | 官方扫描工具的输出 |
-| 安装 macOS | ⬜ | 当前卡在内核早期（`RTC:` 之后），见下 |
+| 安装 macOS | ⬜ | 当前停在 AMD I2C 控制器 `start()`，见下 |
 
 ---
 
@@ -112,27 +114,35 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 > **所以第一档放弃 Dortania MAT 组合的理由对这台机器不成立。**
 > 详见 [受控实验记录](docs/05-受控实验记录.md) 的 D3。
 
-### 4. 当前第一轮：先把实测条件弄干净
+### 4. 第一轮：把实测条件弄干净 —— ✅ 已成功
 
-`npci` 从未生效，意味着此前所有"某改动有效/无效"的结论都不可靠。
-所以第一轮**只做一件事**：把 `boot-args` 加入 `NVRAM → Delete`，让那个写了很久的
-`npci=0x2000` **第一次真正进入内核**，同时把未实测的第二档撤回实测基线。
+`npci` 从未生效，意味着此前所有"某改动有效/无效"的结论都不可靠。所以第一轮**只做一件事**：
+把 `boot-args` 加入 `NVRAM → Delete`，让那个写了很久的 `npci=0x2000` **第一次真正进入内核**，
+同时把未实测的第二档撤回实测基线。相对基线的 diff **只有 1 行**。
 
-相对基线的 diff **只有 1 行**（详见 [受控实验记录](docs/05-受控实验记录.md) 第 3 节）：
-
-```diff
- 				<string>ForceDisplayRotationInEFI</string>
- 				<string>csr-active-config</string>
-+				<string>boot-args</string>
-```
-
-**成功判据**（引导后 1 秒内即可确定）：
+**结果**（`logs/opencore-2026-10-13-011110.txt`）：
 
 ```
-OC: Deleting NVRAM 7C436110-...:boot-args - Success
-OCVAR: Setting NVRAM 7C436110-...:boot-args - Success
+00:231  OC: Deleting NVRAM 7C436110-…:boot-args - Success      ← 冻结值被清掉
+00:280  OCVAR: Setting NVRAM 7C436110-…:boot-args - Success    ← 新值写入
+15:255  AAPL: #[EB|MBA:OUT] <"… ipc_control_port_options=0 npci=0x2000 slide=159">
 ```
-且 `MBA:OUT` 出现 `npci=0x2000`。
+
+同时 `OCABC:` 确认本轮真正生效的内存映射参数就是实测基线
+（`DEVMMIO 1 / VMAP 1 / WRUNPROT 1 / RBMAP 0 / RTPERMS 0`），
+`OC: Prelinked status - Success`，且仓库配置经脱敏后与卡上**逐字节相同**。
+
+### 5. 第二轮（当前）：隔离 AMD I2C（AMDI0010）控制器
+
+屏幕最后一行停在 `VoodooI2C…Controller::AMDI0010 Starting I2C controller`。
+经 DSDT 反编译确认，**触摸板正是挂在 `\_SB.I2CA`（`_HID = AMDI0010`）上**，
+所以这不是无关旁支，而是触摸板所在控制器。
+
+单变量改动：禁用 4 个 VoodooI2C 家族条目（`VoodooI2C` / `VoodooGPIO` /
+`VoodooI2CServices` / `VoodooI2CHID`），diff **只有 4 行 `true` → `false`**；
+`VoodooInput` 保留启用（它与 I2C bundle 无加载依赖，且 `VoodooPS2Trackpad` 运行时需要它），
+`VoodooPS2Controller` 一族全部保留。详见
+[受控实验记录](docs/05-受控实验记录.md) 第 4 节（含依赖闭包证明与判定标准）。
 
 ---
 
@@ -190,10 +200,11 @@ docs/05-受控实验记录.md            ★ 当前在测什么：实验设计�
 hardware/本机配置摘要.md           脱敏后的硬件清单
 efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
 efi/README.md                    kext 清单与用 1401 重建的方法
-logs/opencore-*.txt              4 份真实 OpenCore 引导日志（已脱敏）
+logs/opencore-*.txt              5 份真实 OpenCore 引导日志（已脱敏）
 logs/bootfix-findings.md         1401 诊断器对这些日志的判定
 scripts/sanitize-config.py       把卡上配置脱敏后搬进仓库（字节级保真）
-scripts/sync-to-github.ps1       ★ 一键同步：脱敏 → ocvalidate → 泄漏扫描 → push → 远端复核
+scripts/scrub-log.py             清洗引导日志里的身份值（含 UUID 字节序反转形式、磁盘序列号）
+scripts/sync-to-github.ps1       ★ 一键同步：双重脱敏 → ocvalidate → 泄漏扫描 → push → 远端复核
 scripts/read-screen-photo.py     把手机拍的启动画面裁切放大以读清文字
 scripts/patch-stick-config.py    免提权、直接改 U 盘上 config.plist 的小工具
 scripts/rewrite-stick-as-admin.cmd  提权重写 U 盘的模板脚本
@@ -216,10 +227,18 @@ scripts/rewrite-stick-as-admin.cmd  提权重写 U 盘的模板脚本
 
 ## 隐私说明
 
-公开前已抹除：SMBIOS `SystemSerialNumber` / `MLB` / `SystemUUID` / `ROM`。
+公开前已抹除：`config.plist` 里的 SMBIOS `SystemSerialNumber` / `MLB` / `SystemUUID` / `ROM`，
+以及引导日志里的同一批值 + 网卡 MAC + 内置 NVMe 磁盘序列号。
 原始扫描报告（含网卡 MAC 与磁盘序列号）与 ACPI 转储**未收录**。
-`scripts/sanitize-config.py` 与 `scripts/sync-to-github.ps1` 会在发布前自动完成脱敏与扫描，
-任一身份字段找不到就直接失败退出。
+`scripts/sanitize-config.py` / `scripts/scrub-log.py` / `scripts/sync-to-github.ps1`
+会在发布前自动完成脱敏与扫描，任一身份字段找不到就直接失败退出。
+
+> **一处已修复的泄漏，留档说明**：最初发布的 4 份日志里残留了真实 SMBIOS UUID。
+> 两个原因：(1) OpenCore 打印 `system-id` 时把 GUID 前三个字段**字节序反转**，
+> 只搜配置里的原字符串会漏掉；(2) 当时的校验命令把
+> `Get-ChildItem | Select-String -Quiet` 的整条管道聚合成一个布尔值，误判为"已脱敏"。
+> 现已修正，并在同步脚本里加入字节序反转 UUID、GUID 尾段、未脱敏 `NVMe` 路径三类检查。
+> **注意：修复只作用于当前分支内容，旧提交历史里仍可追溯。**
 
 **直接使用 `efi/config.plist` 前请换成自己的序列号**（用 1401 重新生成即可），不要照抄示例里的占位值。
 

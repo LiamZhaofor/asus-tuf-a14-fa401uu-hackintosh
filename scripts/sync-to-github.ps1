@@ -77,6 +77,16 @@ $after = (Get-FileHash -Algorithm SHA256 $target).Hash
 if ($before -eq $after) { Ok "efi/config.plist unchanged ($($after.Substring(0,16))...)" }
 else { Ok "efi/config.plist updated  $($before.Substring(0,16))... -> $($after.Substring(0,16))..." }
 
+# Boot logs carry the same identity values (serial/MLB/UUID/MAC/disk serial). Scrub them
+# in place first: they are also what a stale-but-published log leaked last time.
+$logs = @(Get-ChildItem (Join-Path $repo 'logs') -Filter 'opencore-*.txt' -ErrorAction SilentlyContinue)
+foreach ($l in $logs) {
+    $out = & $python (Join-Path $repo 'scripts\scrub-log.py') $l.FullName 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { Write-Host $out; throw "scrub-log.py failed on $($l.Name) - refusing to publish" }
+    Write-Host ("    " + $out.Trim())
+}
+Ok "boot logs scrubbed ($($logs.Count) file(s))"
+
 # ------------------------------------------------------------------ 2. validate
 Step 2 "ocvalidate"
 $ocv = Get-ChildItem (Join-Path $env:USERPROFILE '.cache\1401') -Filter '*-ocvalidate.exe' -ErrorAction SilentlyContinue |
@@ -103,13 +113,30 @@ foreach ($key in @('SystemSerialNumber', 'MLB', 'SystemUUID')) {
 $m = [regex]::Match($stickText, '<key>ROM</key>\s*<data>\s*([^<\s]+)\s*</data>')
 if ($m.Success) { $secrets['ROM'] = $m.Groups[1].Value.Trim() }
 
-# The ROM blob is the NIC MAC as raw bytes; also look for the colon-separated form.
+# The ROM blob is the NIC MAC as raw bytes; also look for the other renderings.
 if ($secrets.ContainsKey('ROM')) {
     try {
         $bytes = [Convert]::FromBase64String($secrets['ROM'])
         if ($bytes.Length -ge 6) {
-            $mac = ($bytes[0..5] | ForEach-Object { $_.ToString('X2') }) -join ':'
-            $secrets['ROM-as-MAC'] = $mac
+            $secrets['ROM-as-MAC-colon'] = ($bytes[0..5] | ForEach-Object { $_.ToString('X2') }) -join ':'
+            $secrets['ROM-as-MAC-dash']  = ($bytes[0..5] | ForEach-Object { $_.ToString('X2') }) -join '-'
+            $secrets['ROM-as-hex']       = ($bytes[0..5] | ForEach-Object { $_.ToString('X2') }) -join ''
+        }
+    } catch { }
+}
+
+# OpenCore prints system-id with the first three GUID fields BYTE-SWAPPED, so searching
+# for the config's SystemUUID string alone misses it - that is exactly how one published
+# log kept a real UUID. Search the little-endian rendering and the GUID's tail as well.
+if ($secrets.ContainsKey('SystemUUID')) {
+    try {
+        $guidBytes = ([guid]$secrets['SystemUUID']).ToByteArray()
+        $sw = ([BitConverter]::ToString($guidBytes)) -replace '-', ''
+        if ($sw.Length -eq 32) {
+            $secrets['SystemUUID-swapped'] = ($sw.Substring(0,8) + '-' + $sw.Substring(8,4) + '-' +
+                                              $sw.Substring(12,4) + '-' + $sw.Substring(16,4) + '-' +
+                                              $sw.Substring(20,12))
+            $secrets['SystemUUID-tail'] = $sw.Substring(20,12)
         }
     } catch { }
 }
@@ -125,6 +152,13 @@ foreach ($kv in $secrets.GetEnumerator()) {
         }
     }
 }
+# The internal NVMe serial is not in the stick config; it only appears inside device
+# paths in the logs, as hex bytes. Require it to be redacted.
+$nvme = Get-ChildItem $repo -Recurse -File -Force |
+        Where-Object { $_.FullName -notlike "*$([IO.Path]::DirectorySeparatorChar).git$([IO.Path]::DirectorySeparatorChar)*" } |
+        Select-String -Pattern 'NVMe\(0x1,(?!<disk-serial-redacted>)[0-9A-Fa-f]{2}-' -ErrorAction SilentlyContinue
+foreach ($h in $nvme) { $leaks += "unredacted NVMe disk serial in $($h.Path.Substring($repo.Length + 1)):$($h.LineNumber)" }
+
 if ($leaks.Count) { $leaks | ForEach-Object { Bad $_ }; throw "identity values are present in the repository - not publishing" }
 Ok "no identity value from the stick appears anywhere in the repository"
 

@@ -786,7 +786,7 @@
 
 04:341 00:011 OC: Setting SSN <SMBIOS-SERIAL-REDACTED> - Success
 
-04:352 00:011 OC: Setting system-id 22FFCD90-DEA6-1E44-A478-992EC6AF56B6 - Success
+04:352 00:011 OC: Setting system-id <UUID-REDACTED> - Success
 
 04:363 00:011 OC: Setting FirmwareFeatures FFAFF06E - Success
 
