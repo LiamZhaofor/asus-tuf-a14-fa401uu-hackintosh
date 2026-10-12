@@ -6,8 +6,9 @@
 > **状态：进行中（未安装完成）。** 第一轮修好了"`boot-args` 从未生效"这个把此前所有结论都
 > 污染掉的问题（`npci=0x2000` 已真正进入内核）；第二轮（禁用 VoodooI2C 家族）已执行，
 > 六项预注册检查**全部符合预期**。屏幕最后停在 `PCI configuration begin`，但**没有停留时长**，
-> 因此**尚不能**判定为永久卡死。第三轮（只移除 `npci=0x2000`）已准备、**待批准** ——
-> 见 [受控实验记录](docs/05-受控实验记录.md) 与 [引导排错实录](docs/03-引导排错实录.md)。
+> 因此**尚不能**判定为永久卡死。第三轮（只移除 `npci=0x2000`）**已写入卡上、待引导验证**
+> （将记录 ≥10 分钟停留情况）—— 见 [受控实验记录](docs/05-受控实验记录.md) 与
+> [引导排错实录](docs/03-引导排错实录.md)。
 
 ---
 
@@ -153,27 +154,35 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 四个 VoodooI2C kext **各 0 条注入**；独立 `VoodooInput` 成功注入（且只有一份）；
 无 panic 文件、无新错误。截图停在 `PCI configuration begin`，但**无停留时长**，见 §6。
 
-### 6. 第三轮（已准备，待批准）：只移除 `npci=0x2000`
+### 6. 第三轮（已写入卡上，待引导验证）：只移除 `npci=0x2000`
 
-**为什么它是干净的单一变量**：Apple 自己的 `IOPCIFamily` 源码里
-`npci=` 是 `pci=` 的**取反**（`gIOPCIFlags &= ~debug`），而 `kIOPCIConfiguratorPFM64 = 0x2000`
-**默认是置位的** —— 所以 `npci=0x2000` 等于**清掉 macOS 自带的 64 位 MMIO 映射能力**
-（不补合成 64 位窗口、且收回 64 位 BAR 的地址上限）。
+**为什么它是干净的单一变量**：Apple 自己的 `IOPCIFamily` 源码里 `npci=` 是 `pci=` 的**取反**
+（`gIOPCIFlags &= ~debug`），而 `kIOPCIConfiguratorPFM64 = 0x2000` **默认是置位的** ——
+所以 `npci=0x2000` 等于**清除 PFM64 标志**。
 
-而本机的实测事实是：**Above 4G Decoding 已启用**（GPU 的 BAR 被固件放在 `0x7E00000000` ≈ 504 GiB，
+该标志在源码里只被**引用 5 次、其中仅 3 处是行为测试**，且全部是把 `maxAddress` 设为全 1
+（即"允许 64 位 BAR 与 prefetchable 区间落在 64 位地址空间的任意位置"）。
+**合成窗口那段并不检查该标志**（只看 `hasHostMemory && !hasHost64 && !fAddedHost64`，
+尺寸由 `fPFM64Size` / `pci64=` 决定）—— 所以**不能说** `npci=0x2000` "关闭了 64 位 MMIO"。
+
+本机的实测事实是：**Above 4G Decoding 已启用**（GPU 的 BAR 被固件放在 `0x7E00000000` ≈ 504 GiB，
 不是靠 BAR1 大小推的）、**BAR1 = 8 GiB ReBAR**（已超出 macOS 1 GB 的理论上限，靠
-`ResizeAppleGpuBars=0` 缩到 64 MB 才能用）。⇒ 在这台机器上清掉 PFM64 只会**减少**分配余地。
+`ResizeAppleGpuBars=0` 缩到 64 MB）。这类设备的 64 位 BAR 恰好依赖上面那条许可，所以本轮要检验的
+**推论**是"清除 PFM64 收回了本机需要的 64 位安置余量"。**这只是推论，不是已知结论。**
 
 同时 `docs/03` 那句"加 npci 就越过了 `PCI configuration begin`"**已被证伪**：
 第 2、3 次引导是在 `MBA:OUT` 里**根本没有 npci** 的情况下越过该阶段的。
 
-**改动：相对卡上 Round 2 只有 1 行**（删掉 `boot-args` 末尾的 ` npci=0x2000`），
+**改动：相对 Round 2 只有 1 行**（删掉 `boot-args` 末尾的 ` npci=0x2000`），
 `Booter.Quirks` / AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 全部逐字节不变，
-`NVRAM → Delete` 里**继续保留 `boot-args`**。候选已发布供评审：
-[`efi/candidates/round3-drop-npci.plist`](efi/candidates/round3-drop-npci.plist)（`ocvalidate` 0 issues）。
+`NVRAM → Delete` 里**继续保留 `boot-args`**。
 
-> **不**替换成 `npci=0x3000`，**不**改 BIOS，**不**动 IOMMU。详见
-> [受控实验记录](docs/05-受控实验记录.md) §6（含判定标准与回滚）。
+**写入结果**：`4642CD80748AF3A6…`（52125 B，`ocvalidate` 1.0.9 → 0 issues，SMBIOS 原样保留，
+其余段落逐字节未变；33 项自检全 PASS）。回滚：`D:\_backup-round0\config.plist.round2`。
+
+> **不**替换成 `npci=0x3000`，**不**改 BIOS，**不**动 IOMMU，**不**自动切 MAT。
+> 若本轮仍卡住，**只能**记为"移除 npci 不足以解决当前问题"—— **不能**据此排除 npci 本身的影响，
+> **也不能**因此锁定 ACPI/MAT。详见 [受控实验记录](docs/05-受控实验记录.md) §6。
 
 ---
 
