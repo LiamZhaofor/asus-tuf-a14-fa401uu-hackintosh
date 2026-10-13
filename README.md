@@ -436,18 +436,30 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > **结论**：① **阶段 B 一次写都没做**（`New BAR` 计数 **0**、`Reprogrammed` **0** ⇒ `from 6 to 6` 是**零写入的纯读回**）；
 > ② ⇒ **OpenCore 的 RBAR Control 写入确实生效**，`docs/08` §3.3 的二义性解决：
 > **"GPU 忽略/锁住写入"被证伪**，`New BAR == Old BAR` 的真实原因是**设备保留了 BAR 内容**；
-> ③ **跨轮次推论**：R4/R6 虽无阶段 A，但**阶段 B 自己把 13 写成了 6**（`New BAR`+`Reprogrammed` 为证）
-> ⇒ **R2/R4/R5B/R6/R7 的 macOS 全都跑在 64 MiB BAR1 之下** ⇒ **"BAR1 太大"从来不是当时的条件**，
-> **整条 BAR 轴对本停点的嫌疑大幅下降**；
+> ③ **跨轮次（证据等级已下调）**：R4/R6 虽无阶段 A，但**阶段 B 确实发出了写入**
+> （`New BAR`+`Reprogrammed` 为证）⇒ **"BAR1 在交给 XNU 之前已是 64 MiB"证据很强**；
+> **但那些轮次没有各自的写后读回** ⇒ **不能**声称"当时 XNU 一定用了 64 MiB BAR1"，
+> 更不能把「Apple 交接阶段的尺寸」等同于「XNU PCI 枚举阶段的最终尺寸」
+> ⇒ **BAR 轴嫌疑下降，但未被排除**；
 > ④ **屏幕仍停在** `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`
-> （照片 `IMG20261013214007.jpg`，与 R4/R6 逐行一致）⇒ **早期 64 MiB 缩容不足以**进入 Recovery，
-> **不能排除** macOS 后续重新分配资源；
+> （照片 `IMG20261013214007.jpg`）⇒ **Recovery 尚未进入**；**完整停留时长待操作者确认**；
 > ⑤ **GOP 风险本次未触发**（引导正常到达 Apple 路径并跑到 `EXITBS`）—— 只说明"本次未触发"，**不等于无风险**。
 >
-> **下一轮首选（待批准）= 候选 B**：`Booter → Quirks → ResizeAppleGpuBars: 0 → -1`
-> —— 让 macOS **第一次**看到固件的 **8 GiB** BAR1（该条件从未被测过），
-> 且它在 **Booter 阶段（选择界面之后）**生效 ⇒ **无选择界面被破坏的风险**。
-> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §F 与 [docs/05](docs/05-受控实验记录.md) §7.20。
+> **Round 7 记录**：「BAR 读回实验成功；Recovery 尚未进入；完整停留时长待操作者确认」。
+> **⛔ 原"Round 8 候选 B（只改 `ResizeAppleGpuBars: 0 → -1`）"已判定为设计无效** ——
+> Round 7 已把 `UEFI.ResizeGpuBars` 设为 `0`，阶段 A 会先在 UEFI 早期缩容，
+> 只改 Booter 项**不会**把 BAR1 恢复成 8 GiB。若将来要测 8 GiB，必须以 **Round 4 为基线**
+> （`UEFI.ResizeGpuBars=-1` **且** `Booter.ResizeAppleGpuBars=-1`，只差 Booter 一项）——
+> 但该实验已**按指示降级**。
+>
+> **下一轮方向（暂不批准写盘）：先做 PCI 桥资源 / 固件 ACPI·IRQ / 设备枚举的只读审计。**
+> `docs/08` §10 已用现有产物给出四条**排除性**结论（所有窗口都在 ACPI 声明范围内、
+> **部分重叠 = 0**、总线号 0/1/2/3/4/101/102/103 全在声明范围内、32 位窗口仅用 43%）
+> 与四条**待追线索**（`GP11` 于 `0/3/1` 持 384 MiB+64 GiB 窗口却**无端点**；
+> DSDT 64 位窗口**基址** `0x460000000` 同时是固件运行期 MMIO 保留区；
+> WiFi 的 64 位 BAR 恰好**顶满**窗口上沿 `MAM`；32 位窗口上沿被 ECAM 顶死）。
+> 缺口是**桥的寄存器级窗口/总线号**（只存在于配置空间）⇒ Round 8 首选即**补全这份只读数据**。
+> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §10 与 [docs/05](docs/05-受控实验记录.md) §7.20。
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
