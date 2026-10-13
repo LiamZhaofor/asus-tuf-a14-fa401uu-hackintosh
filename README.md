@@ -358,7 +358,7 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > 2. **风险是"较低、可回滚"，不是"零风险"。** 修改 PCI 标志**仍可能造成更早的引导失败或显示异常**，
 >    **不得预设最坏结果只是"无变化"**。
 
-> **🔥 Round 6 已引导一次 —— 日志侧第 1–3 项全部通过，屏幕侧尚无照片。**
+> **🔥 Round 6 已引导并正式结案 —— 配置生效，内核启动未成功，≥10 分钟无新输出。**
 > 日志 [`logs/opencore-2026-10-13-170428.txt`](logs/opencore-2026-10-13-170428.txt)：
 > ✅ `MBA:OUT` 含 `npci=0x3000`；✅ `OC: Prelinked status - Success`；
 > ✅ MAT 三元组 / `DEVMMIO=1` / 7 条 `MMIO devirt` / 四个 VoodooI2C 仍禁用 / RBAR 段
@@ -368,21 +368,37 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > `OC: Not deleting NVRAM … matches add` + `OCVAR: … - ignored, exists`（R4）
 > → **`OC: Deleting NVRAM … - Success` + `OCVAR: Setting NVRAM … - Success`**（R6）
 > ⇒ **`npci=0x3000` 确实被写进 NVRAM 并进入有效命令行**。
-> 其余 15 行全是时间戳 / 句柄地址 / 频率尾数 / `slide=` / `52124→52136 bytes` 等预期噪声，
-> **没有任何新增失败行，也没有任何错误行消失**。
 >
-> **屏幕侧（第 4、5 项）尚无证据** —— 本机没有 17:00 之后的相机照片，也没有停留时长
-> ⇒ **本轮暂不记为"成功"或"失败"**，只记为"**配置生效，且 OpenCore 阶段与 Round 4 无任何回归**"。
-> "是否到达/越过 `PCI configuration begin`"、"是否出现 `PCI configuration end` 或进入 Recovery"
-> **必须**等照片 + 停留时长。详见 [docs/05](docs/05-受控实验记录.md) §7.17。
+> **屏幕侧（操作者补充照片，已独立复核）**：`IMG20261013170545.jpg` 最后两行确认是
+> `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`，
+> 上方是 5× `[addMemoryRange()] AppleVTD …` 与 `CoreAnalyticsHub start completed`
+> —— **与 Round 4 的屏幕内容逐行一致**；操作者确认在该画面**连续等待 >10 分钟无新输出、未进入 Recovery**。
+>
+> **⚠️ 措辞约束**：**不得**把最后可见的两行 PCI 日志等同于"已定位的死锁指令"。
+> 严格可得的只有：**≥10 分钟没出现 `[ PCI configuration end, … ]` ⇒ `configure()` 没走到 `:3388`**；
+> 这不能证明内部死锁（也可能极慢/无限循环），也不能指出停在哪台 PCI 设备
+> —— 因为 `:3342` 在 `doConfigure()` 期间**主动关闭 PE 屏幕**。
+> 详见 [docs/05](docs/05-受控实验记录.md) §7.17 / §7.18。
 
-> **回滚路径保留**：`D:\_backup-round0\config.plist.round4-restored`（= Round 4 原样，`021F02B3…`），
-> 以及原始 `D:\_backup-round0\config.plist.round4`。
-> ```powershell
-> Copy-Item D:\_backup-round0\config.plist.round4-restored D:\EFI\OC\config.plist -Force
-> ```
-> **若本轮最终确认无法启动：先记录证据，再恢复 Round 4，不自动尝试其它 PCI 参数；
-> 未经批准不执行 Round 7。**
+> **✅ 已按批准回滚到 Round 4**：卡上 `43ABBAD5…` → **`021F02B3B46953021FF31835518790DD6BEB57074BE822D127305434581815E4`**（52124 B），
+> `ocvalidate` → **No issues found**。回滚路径保留：
+> `D:\_backup-round0\config.plist.round4-restored` 与 `…\config.plist.round4`。
+> **npci 轴到此停止**：`0x2000`（Round 2）与 `0x3000`（Round 6）都**不足以进入 Recovery**。
+
+> **RTX 4050 BAR 专项 + PCI 资源审计见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md)。**
+> 三条硬结果：
+> ① **8 GiB 的 BAR1 在 `0x7C00000000`，不在 `0x7E00000000`**（后者只有 32 MiB 的 BAR3）
+> —— 此前"8 GiB BAR 恰好顶到 DSDT 64 位窗口上限"的推论**前提被推翻**；
+> ② **`nvidia-smi -q -d MEMORY` 是本机可用、快速、只读的 BAR1 读数仪**，本轮实测
+> **BAR1 Total = 8192 MiB**，与 `plan.json` 的 `bar1_bytes = 8589934592` 一致
+> （也证明 1401 扫描里的 `"Resizable BAR": "Disabled"` 是**错误读数**）；
+> ③ **`New BAR == Old BAR` 只能说明地址寄存器相同，不能证明 BAR size 没变** ——
+> OpenCore 从不读回写后的 Control 寄存器，所以"显卡是否真的采用了 64 MiB BAR"**目前仍是 UNKNOWN**。
+>
+> **推荐 Round 7 = 候选 A**：单变量把 `UEFI → Quirks → ResizeGpuBars` 由 `-1` 改为 `0`，
+> 然后**经 OpenCore 引导 Windows**，用 `nvidia-smi -q -d MEMORY` 读回 BAR1 尺寸
+> —— 若变成 64 MiB 则证明 OpenCore 的 RBAR 写入**确实生效**，若仍是 8192 MiB 则需用
+> Linux 只读 `lspci -xxxx -s 01:00.0` 判别。**只给候选，未写入 U 盘；等批准。**
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
@@ -471,6 +487,7 @@ docs/04-驱动核对.md               kext 逐个审计（版本/架构/顺序/�
 docs/05-受控实验记录.md            ★ 当前在测什么：实验设计、精确 diff、判据、回滚
 docs/06-只读分析与Round5候选.md    ★ 只读 ACPI/PCI 分析、上游案例复核、Round 5 候选（只给 diff）
 docs/07-上游案例复核与Round6候选.md ★ Round 5B 结案与回滚、Acer 案例复核、IOPCIFamily-681 标志位、1401 版本策略对比、Round 6 候选
+docs/08-RTX4050-BAR与PCI资源审计.md  ★ RTX 4050 BAR1 专项（BDF/地址/尺寸/RBAR 解码/读回手段）、PCI root bridge 与 _CRS 审计、Round 7 候选
 hardware/本机配置摘要.md           脱敏后的硬件清单
 efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
 efi/README.md                    kext 清单与用 1401 重建的方法
