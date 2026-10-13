@@ -11,10 +11,14 @@
 
 | 候选 | 相对卡上状态 | 状态 |
 |---|---|---|
-| *（当前无待批准候选）* | — | — |
+| `round4-mat-triple.plist` | 只翻三个内存映射标志（`EnableWriteUnprotector` True→False、`RebuildAppleMemoryMap` False→True、`SyncRuntimePermissions` False→True），共 3 行 | **待批准** |
 
 > `round3-drop-npci.plist` 已于获批后**写入卡上**，因此转正为 `efi/config.plist` 并从本目录移除。
 > 其改动（1 行）仍完整记录在 `docs/05` §6.2 与 §6.7。
+
+`round4-mat-triple.plist` 是 Dortania 给"**支持 MAT** 的固件"的标准组合 —— 本机每轮引导都打印
+`OCABC: MAT support is 1`，且 `DevirtualiseMmio` / `SetupVirtualMap` 保持不变。
+分析、精确 diff 与判定标准见 `docs/05` §7。
 
 本目录下的任何文件在提交前都必须经过 `scripts/sanitize-config.py` 置零身份字段，
 并通过 OpenCore 1.0.9 的 `ocvalidate`（同步脚本会自动做这两件事）。

@@ -6,8 +6,9 @@
 > **状态：进行中（未安装完成）。** 第一轮修好了"`boot-args` 从未生效"这个把此前所有结论都
 > 污染掉的问题；第二轮（禁用 VoodooI2C 家族）六项预注册检查**全部符合预期**。
 > 第三轮（只移除 `npci=0x2000`）**已写入并已引导**：日志侧确认 `MBA:OUT` 里已无任何 `npci=`、
-> 四个 VoodooI2C 仍未注入、其它对照项逐字未变。**内核侧结论待定** —— 尚缺**停留时长**与
-> 全屏照片，因此**不能**判断是否越过 `PCI configuration` —— 见
+> 四个 VoodooI2C 仍未注入、其它对照项逐字未变；屏幕最后停在 `RTC: Only single RAM bank`
+> （**不是已确认死因**）。**内核侧结论仍待定** —— 尚缺 **≥10 分钟停留时长**与全屏照片。
+> 第四轮候选（MAT 内存映射三元组）**已准备、待批准** —— 见
 > [受控实验记录](docs/05-受控实验记录.md) 与 [引导排错实录](docs/03-引导排错实录.md)。
 
 ---
@@ -183,6 +184,36 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 > **不**替换成 `npci=0x3000`，**不**改 BIOS，**不**动 IOMMU，**不**自动切 MAT。
 > 若本轮仍卡住，**只能**记为"移除 npci 不足以解决当前问题"—— **不能**据此排除 npci 本身的影响，
 > **也不能**因此锁定 ACPI/MAT。详见 [受控实验记录](docs/05-受控实验记录.md) §6。
+
+**屏幕现象（用户报告）**：最后一行是 `RTC: Only single RAM bank (128 bytes)`。
+**⚠️ 它不是已确认的死因** —— 该行是 AppleRTC 的信息性输出，而且"最后一行"在四轮之间来回移动
+（修复前是这条、round1 是 VoodooI2C `start()`、round2 是 `PCI configuration begin`），
+不给出停留时长就无法区分"停点不稳定"与"阶段本来慢"。
+同样，`OC: Panic log does not exist` 出现在 `01:129`（boot.efi 启动**之前**），
+**不能**用来证明内核没有故障。
+
+### 7. 第四轮候选（已准备，待批准）：MAT 内存映射三元组
+
+| Quirk | 卡上现状 | 候选 |
+|---|---|---|
+| `EnableWriteUnprotector` | `True` | **`False`** |
+| `RebuildAppleMemoryMap` | `False` | **`True`** |
+| `SyncRuntimePermissions` | `False` | **`True`** |
+
+其余全部不变（`DevirtualiseMmio=True`、`SetupVirtualMap=True`、I2C 仍禁用、无 `npci`、
+AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
+
+**为什么适合 FA401UU**：Dortania 的条件原文是 *"If your firmware supports MATs (2018+ firmwares)"*，
+并让你用日志确认 —— 本机**每轮引导都打印 `OCABC: MAT support is 1`**，条件满足；
+而 OpenCore 文档写明 `RebuildAppleMemoryMap` 是**取代** `EnableWriteUnprotector` 的那一个，
+所以卡上现状用的正是 Dortania 给**不支持 MAT 的旧固件**的组合。
+
+**必须同时知道的反面证据**：第 2、3 次引导**已经跑过这组组合**并同样停住 ——
+但那两次 `npci` **未被应用**、I2C 家族**仍启用**。所以本轮是它**第一次**在干净条件下运行。
+
+精确 diff（**3 行**）、判定标准、回滚与 Round 5 方向见
+[受控实验记录](docs/05-受控实验记录.md) §7；候选：
+[`efi/candidates/round4-mat-triple.plist`](efi/candidates/round4-mat-triple.plist)（`ocvalidate` 0 issues）。
 
 ---
 
