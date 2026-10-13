@@ -6,6 +6,18 @@
 > **本轮没有改任何东西**：U 盘、BIOS、Windows EFI、分区、`config.plist` 全部未动。
 > 唯一新增的写入是**本仓库的文档与日志**（见 §6）。
 
+> **初版勘误（同一次作业内自查更正，留档）**
+>
+> 1. `_CRS` 的第二个 32-bit 窗口：初版写成 `0xFEE00000 + 0x1200000 = 0xFEE00000–0xFEF1FFFF`。
+>    **算术与控制流都错**（`+0x1200000` 会进位到 `0x1_0000_0000`；且 `NBTP=0xFEC00000` 使
+>    `:2537` 成立、`:2561` 分支不可达、静态结果为 `LEN7=0`）。已按 §2.2 重写。
+> 2. `NBTP`/`NBTS`：初版写成"静态未找到定义"。**错** —— 它们是
+>    `dsdt.dsl:292 Name (NBTP, 0xFEC00000)` 与 `:237 Name (NBTS, 0x5000)`。已按 §2.2 / §2.7 更正。
+> 3. 五块 MMIO 的来源：初版按"ACPI 对象"叙述。**错** —— 它们是
+>    `EFI memory map` 里 `Type==EfiMemoryMappedIO && EFI_MEMORY_RUNTIME` 的描述符
+>    （`ServiceOverrides.master.c:281-310`），ACPI 只能解释。已按 §2.5 重写。
+> 4. ACPI 错误串 `[_SBW]` → **`[_S0W]`**（见 §2.4）。
+
 ---
 
 ## 1. Round 4 引导结果核对（第一阶段）
@@ -165,8 +177,27 @@
 | Bus number | `0x00 – 0x7F` | `CRS1` `WordBusNumber` + `MIN0=BRB(0)`, `LEN0=BRL(0x0100)` |
 | I/O | `0x0000–0x03AF`、`0x03E0–0x0CF7`、`0x0D00–0x0FFF`，加 `0x0CF8/0x0CFC` | `CRS1`，`MIN1=IOL` 分支 |
 | 32-bit MEM #1 | `MBB=0xA0000000` … `NBTP-1` | `:2539-2552` |
-| 32-bit MEM #2 | `0xFEE00000` + 长度 **`0x1200000`（18 MiB）** → `0xFEE00000–0xFEF1FFFF` | `:2561-2566`，且可化简为 `MBB+MBL-0xFEE00000 = 0xE0000000-0xFEE00000` |
-| 64-bit MEM | `MAB=0x460000000` … `MAM=0x7FFFFFFFFF`（长度 `MAL=0x7BA0000000` ≈ 494 GiB） | `:2571-2579` |
+| 32-bit MEM #2 | **静态路径下为空（`MIN7=MAX7=LEN7=Zero`）** | `:2536-2545`，见下 |
+| 64-bit MEM | `MAB=0x460000000` … `MAM=0x7FFFFFFFFF`（长度 `MAL=0x7BA0000000` ≈ 494 GiB） | `:2571-2579`（不受 `Local7` 影响） |
+
+**⚠️ 一处必须先纠正的读法（对 `docs/06` 初版的勘误）**：初版把 32-bit MEM #2 写成
+`0xFEE00000 + 0x1200000 = 0xFEE00000–0xFEF1FFFF`，**这是错的**，两处都错：
+
+1. **算术**：`0xFEE00000 + 0x1200000 = 0x1_0000_0000`，所以任何以 `0xFEE00000` 起 18 MiB 的区间
+   都是 `0xFEE00000–0xFFFFFFFF`（32 位空间顶部 18 MiB），**不是** `0xFEF1FFFF`
+   （那只有 `0x120000` ≈ 1.125 MiB）。
+2. **控制流**：`NBTP = 0xFEC00000`（`:292 Name (NBTP, 0xFEC00000)`）、`NBTS = 0x5000`（`:237`）是
+   **静态 root-scope Name**（已核实；全文件无写入者，运行配置的 `ACPI → Patch` 只有 `_OSI→XOSI` 一条）。
+   于是 `Local0 = MBB+MBL = 0xE0000000`，`:2537 If ((Local0 < NBTP))` 即 `0xE0000000 < 0xFEC00000`
+   **成立** → 走 `:2543-2545` 把 `MIN7/MAX7/LEN7` 全部置 **Zero**。
+   **`:2561 MIN7 = 0xFEE00000` 那条 `Else` 分支在本文件里静态不可达**，而且即便可达，
+   代数化简 `LEN7 = MBB+MBL-0xFEE00000 = -0x1EE00000` 截断进 32 位 `LEN7` 字段也只会得到 `0xE1200000`。
+   （要得到 `0x1200000` 需要 `MBL = 0x60000000`，本 DSDT 是 `0x40000000`。）
+3. **那实际值从哪来**：只有 `:2492 If ((RSTE == One))` → `:2504-2505 MIN7 = RSB1, LEN7 = RSS1`
+   这条路径能给出真实窗口；`RSB1/RSS1` 是
+   `OperationRegion (NRSV, SystemMemory, NRSB, 0x1000)`（`:2252 Name (NRSB, 0x96931000)`，
+   偏移 `:2263 RSB1, 32` / `:2265 RSS1, 32`）的字段，即**固件写在物理 `0x96931028` 的 RAM 状态**，
+   从 ACPI 反编译结果**看不出来**。另外若 `RSTE != 1`，则整段 `MBB/MBL` 逻辑跑完也是"第二窗口为空"。
 
 **`_OSC`（`:2646`）**：标准 PCI Host Bridge UUID `33db4d5b-…-7441c03dd766`；
 `SUPP & 0x16 != 0x16` 时 `CTRL &= 0x1E`，再按 `PEHP/SHPC/PEPM/PEER/PECS` 逐位收敛；
@@ -174,16 +205,16 @@
 **没有任何路径把 `CDW1` 的 bit0（Failure）置位** → 这是一个**正常实现**，
 **不存在**"固件拒绝 PCIe 控制权导致 macOS 自己枚举"的情形。
 
-**最重要的结论（对 §5 的 PFM64 讨论）：本机 host bridge 明确声明了 64-bit MMIO 窗口**，
+**最重要的结论（对 §5 的 PFM64 讨论）：本机 host bridge 明确声明了 64-bit MMIO 窗口**
+（`:2571 If (MAL)` 位于 `Local7` 判断之外，无条件生效；且 `MAB + MAL - 1 = 0x7FFFFFFFFF = MAM` 自洽），
 所以 `IOPCIConfigurator` 里那段"固件没给 64-bit 窗口就合成一个"的分支
 （`hasHostMemory && !hasHost64 && !fAddedHost64`）**在本机不成立**。
 `npci` 通过清 `kIOPCIConfiguratorPFM64` 影响的是**上限**（`maxAddress = ~0ULL`），
 **不是**"有没有窗口"——这与 `docs/05` §5.1/5.2 的勘误一致。
 
-> **未决**：`_CRS` 的 `NBTP`/`NBTS` 是两个**没有在本文件里找到静态定义**的全局名
-> （`:2537/:2550/:2620/:2626`）。`_CRS` 还依赖 `OperationRegion (NRSV, SystemMemory, 0x96931000, 0x1000)`
-> 这个**硬编码物理地址**去读 `RSTE/RSB0..3/RSS0..3`。如果 `NBTP/NBTS` 恰好来自某张**加载失败**的固件表，
-> `_CRS` 就会给出错误窗口。**这是本轮唯一没能闭合的 ACPI 线索**，已登记为候选 D 的旁支（§4）。
+> **修正后的未决项（见 §2.7 U1）**：不是"`NBTP/NBTS` 找不到定义"（已找到，且是静态的），
+> 而是 **`RSTE`/`RSB0..3`/`RSS0..3` 是固件写在 `0x96931000` 的 RAM 状态，ASL 层面不可知**；
+> 也就是说 `_CRS` 到底报哪几个 32-bit 窗口，取决于那份 RAM，而不取决于 DSDT 文本。
 
 ### 2.3 `SSDT-PLUG-ALT` 对 Ryzen 8845H 的适用性（问题 2）
 
@@ -278,12 +309,33 @@ ACPI Error: 3 table load failures, 32 successful (20160930/tbxfload-342)
 * 丢掉的只是 `_DSM` / `_S0W` / `QDSW` / `QBME` 这类**方法**（WLAN 的电源/唤醒语义），
   它们不参与 `IOPCIConfigurator` 的 BAR 分配。
 
-> **不能证明什么**：不能因此说"这三个错误与 PCI 无关就万事大吉"。第 4 条失败表如果与
-> `NBTP/NBTS` 的来源有关（§2.2 未决项），那才是真正需要担心的路径——但本轮**没有证据**支持它。
+> **不能证明什么**：不能因此说"这三个错误与 PCI 无关就万事大吉"。§2.2 修正后，
+> `NBTP/NBTS` 是**静态**定义（与这些失败表无关），所以原先担心的那条路径**已被排除**；
+> 仍在的未知量是 `_CRS` 依赖的 `NRSV` RAM 状态（U1），那不是这三张表能影响的东西。
 
 ### 2.5 五块 MMIO 去虚拟化区域（问题 4）
 
-实测（`logs/opencore-2026-10-13-095517.txt`）：
+**先纠正机制**（这决定怎么读这五行）：这五行**不是 ACPI 对象**。
+OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemoryMappedIO` 且
+`Attribute & EFI_MEMORY_RUNTIME` 的描述符，然后把该位清掉 ——
+`1401/ref/oc/ServiceOverrides.master.c:281-310`：
+
+```c
+281: for (Index = 0; Index < NumEntries; ++Index) {
+282:   if (  (Desc->NumberOfPages > 0)
+283:      && (Desc->Type == EfiMemoryMappedIO)
+284:      && ((Desc->Attribute & EFI_MEMORY_RUNTIME) != 0))
+285:   {
+...      for (Index2 …) if (AREA_WITHIN_DESCRIPTOR (Desc, Whitelist[Index2], 1)) { Skipped = TRUE; }
+298:     DEBUG "OCABC: MMIO devirt 0x%Lx (0x%Lx pages, 0x%Lx) skip %d\n" …
+306:     if (!Skipped) { Desc->Attribute &= ~EFI_MEMORY_RUNTIME; PagesSaved += Desc->NumberOfPages; }
+```
+
+**ACPI 只能"解释"这些区域，不能生成它们。** `skip 0` = 未被 `MmioWhitelist` 覆盖（本空白名单）。
+页数自检：`0x10000 + 0x1E00 + 1 + 0x11FF + 0x20200 = 209408` 页 × 4 KiB = **837632 KiB**，
+与日志 `saved 837632 KB` **完全一致**。
+
+实测（`logs/opencore-2026-10-13-095517.txt:491-497`）：
 
 ```
 11:122 OCABC: MMIO devirt start
@@ -295,19 +347,31 @@ ACPI Error: 3 table load failures, 32 successful (20160930/tbxfload-342)
 11:136 OCABC: MMIO devirt end, saved 837632 KB
 ```
 
-| # | base | 页数 | 大小 | 归属 | 证据强度 |
-|---|---|---|---|---|---|
-| 0 | `0xE0000000` | `0x10000` | 256 MiB | **PCIe ECAM**（MCFG base = `0xE0000000`，覆盖 256 条总线 = 256 MiB） | 已证明（`audit/acpi/firmware/mcfg.dat` 偏移 44 处 base 字段） |
-| 1 | `0xFD000000` | `0x1E00` | 30 MiB | **未确定**。全 46 张反编译表里 `0xFD000000` 出现 **0 次**；它紧贴下一个窗口下沿（`0xFD000000 + 0x1E00000 = 0xFEE00000`） | **未确定** |
-| 2 | `0xFEE00000` | `0x1` | 4 KiB | 与 #3 合起来 = **DSDT `_CRS` 的第二个 32-bit 窗口 `0xFEE00000 + 0x1200000`** | 已证明（算术完全相等） |
-| 3 | `0xFEE01000` | `0x11FF` | ≈18 MiB | 同上 | 已证明 |
-| 4 | `0x460000000` | `0x20200` | ≈514 MiB | **DSDT `MAB`**（64-bit 窗口基址）处的 514 MiB 运行期 MMIO 保留；固件表未再细分声明这一段 | base 已证明（`Name (MAB, …)` 完全相同），**具体占用者未确定** |
+| # | base | 大小 | ACPI 侧最能解释它的对象 | 结论 |
+|---|---|---|---|---|
+| 0 | `0xE0000000` | 256 MiB | **PCIe ECAM**：`mcfg_Notebook.dsl:25-28`（base `0xE0000000`、Segment 0、**bus `00`–`FF`** ⇒ 256×1 MiB）；旁证 `dsdt.dsl:266 Name (PEBS, 0xE0000000)` / `:236 Name (PEBL, 0x10000000)`，经 `\_SB.PCI0.AMDN._CRS`（`:2213-2226`）转发，且 `ssdt3_OemNv2T_.dsl:589-590` 用 ECAM 步进（device≪15、fn≪12） | **精确匹配**，且是 macOS 自己会重映射的硬件 |
+| 1 | `0xFD000000` | 30 MiB | **无**。全部 44 张 `.dsl` 文本搜索 `0xFD000000` **0 命中**（只有 `0xFD300000`/`0xFD500000`）；全部 47 个 ACPI 二进制做小端字节扫描 `00 00 00 FD` 也 **0 命中**（对照模式有命中，说明扫描有效）。该区间**内部**确实有声明：`\_SB.PCI0.GP17.APSP` `0xFD300000`+1 MiB（`:3150-3167`）、`\_SB.TPM` HPM `0xFD500000`+1 MiB（`:6633-6634`, `:6777-6783`），以及芯片组簇 `0xFEC00000–0xFEE00FFF`。780M（`\_SB.PCI0.GP17.VGA`，`:3002-3017`）**根本没有 `_CRS`**，其 Windows BAR 在 `0x7E10000000`+256 MiB / `0xDD200000`+2 MiB（`1401/plan.json:10098-10118`）——**不在 `0xFD000000`** | **未确定** |
+| 2 | `0xFEE00000` | 4 KiB | `dsdt.dsl:3646-3649` `Memory32Fixed (ReadWrite, 0xFEE00000, 0x00001000)`（`\_SB.PCI0.S900`）+ `apic_Notebook.dsl:23 Local Apic Address : FEE00000` | **精确匹配**（LAPIC 页） |
+| 3 | `0xFEE01000` | `0x11FF000` = 18 MiB − 4 KiB | **没有同 base/size 的 ACPI 对象**；它只是内存描述符从 LAPIC 页之后**一路续到 4 GiB 顶端**（属性字不同：`…100D` vs `…0001`），覆盖 `S900._Y18` ROM 窗 `0xFF000000`+16 MiB（`:3711-3714`）与 `\_SB.SMIC` `0xFED80000`+8 MiB（`:4522`） | **部分**（是内存图描述符，不是 ACPI 声明） |
+| 4 | `0x460000000` | 514 MiB | base = `dsdt.dsl:2249 Name (MAB, 0x0000000460000000)`（全 44 张表里该值的**唯一**出现处），即 DSDT 64-bit 窗口（`:2576-2578` / `:2636-2638`）的**基址**；**没有任何 ACPI 对象声明这 514 MiB 的子区间** | **基址匹配；子区间未确定** |
+
+**两条结构性发现：**
+
+* **#1+#3 拼接成一块连续 48 MiB**：`0xFD000000 + 0x1E00000 = 0xFEE00000`，
+  `0xFEE00000 + 0x1200000 = 0x1_0000_0000` —— 即 32 位空间顶部的
+  **`0xFD000000–0xFFFFFFFF`（`0x3000000` = 48 MiB）一整块固件保留 MMIO**，
+  只因属性字不同被切成三个描述符。
+* `#0` 与 `#2` 是 **ACPI 已声明、OS 自己拥有的硬件**（ECAM、LAPIC）；
+  `#1` 与 `#4` 是 **ACPI 里完全没有主人的两块**。这正好回答了"`DevirtualiseMmio=false`
+  是否值得单独测"：**只有这两块存在"保住它的虚拟映射"这一机制的着力点**，
+  而 OpenCore 自己在 `ServiceOverrides.master.c:264-270` 写的失败模式
+  （Haswell 的 `0xFED1C000`、`0xFF000000`："某些固件的运行期服务/SMM 仍会解引用这些虚拟地址"）
+  说的正是这种情况 —— 本机 `MmioWhitelist` 为空，所以**什么都没被保护**。
 
 **怎么读这个结果（对"`DevirtualiseMmio=false` 是否值得单独测"）：**
 
-* 这 5 块都被 OpenCore 从 OS 的内存图里摘掉并"变成可用"（`saved 837632 KB` ≈ 818 MiB）。
-  它们全是 `EFI_MEMORY_RUNTIME`（标志 `…100D` 含 `EFI_MEMORY_RUNTIME|EFI_MEMORY_UC`），
-  也就是说**固件在退出引导服务后仍然打算继续用它们**（ECAM、ACPI/APIC 窗口、GT 窗口）。
+* 这 5 块都被 OpenCore 摘掉 `EFI_MEMORY_RUNTIME`（共 818 MiB）。摘掉的是
+  **运行期虚拟映射**，描述符仍是 `EfiMemoryMappedIO`，所以**不会**被当作 RAM 交给 OS。
 * 上游证据是**分裂**的，必须并列：
   * **issue #9（维护者 `nullmoth` 唯一实质回复）**：AM5 上 `DevirtualiseMmio off` 会导致
     `EB.MM.AKM` / STOP 0x16（"firmware runtime MMIO regions are in the way"），必须 `true`。
@@ -320,6 +384,8 @@ ACPI Error: 3 table load failures, 32 successful (20160930/tbxfload-342)
   所以它的判据必须写成三岔：停点前移/消失（devirt 是变量）／退回 `EB.MM.AKM`（devirt 必须开）／
   停在**同一行**（与 #10 一致，devirt 与本停点无关）。
 * **不能证明什么**：即使停点不变，也**不能**排除 devirt 的影响（与 §7.6 B 的口径相同）。
+* 附带勘误：本项目已发布的 `logs/bootfix-findings.md:97` 把 base `0xFEE01000` 记成
+  "`0xFEDC4000` 附近、4607 pages"，与日志原文不符（那是 1401 诊断器自己的输出，此处只登记差异）。
 
 ### 2.6 RTX 4050 BAR 的**实际**处理路径（问题 5）
 
@@ -385,9 +451,9 @@ ACPI Error: 3 table load failures, 32 successful (20160930/tbxfload-342)
 
 | # | 未决 | 影响 |
 |---|---|---|
-| U1 | `NBTP` / `NBTS` 在哪里定义（静态未找到；`_CRS` 依赖它们） | 若来自加载失败的固件表 → `_CRS` 窗口错误 → 与 PCI 停点直接相关 |
-| U2 | `0xFD000000`（30 MiB）的占用者 | 决定 `DevirtualiseMmio=false` 是否会踩到必需区域 |
-| U3 | `0x460000000` 那 514 MiB 的具体占用者（只知道是 `MAB` 基址） | 同上 |
+| U1 | **`_CRS` 报出的 32-bit 窗口取决于固件写在 RAM `0x96931000` 的 `RSTE/RSB0..3/RSS0..3`，ASL 层面不可知。** `NBTP/NBTS` 本身**已闭合**（`:292 Name (NBTP, 0xFEC00000)`、`:237 Name (NBTS, 0x5000)`，静态、无写入者），且静态路径下第二个 32-bit 窗口为 **空**，`:2561` 分支不可达 | 无法从 ACPI 反编译判断 `_CRS` 实际报哪几个窗口；要确认只能靠内核侧 ACPI 日志（本轮没有） |
+| U2 | `0xFD000000`（30 MiB）的占用者（ACPI 无声明；780M 的 BAR 在别处） | 决定"保住它虚拟映射"的白名单 A/B 是否有必要 |
+| U3 | `0x460000000` 那 514 MiB 的具体占用者（只知道是 `MAB` 基址、且 ACPI 未声明该子区间） | 同上 |
 | U4 | macOS 24.6.0 是否支持 `pci_log` / `pci_log_mode`（源码来自本机取回的 IOPCIFamily，未与 24.6.0 逐版本对齐） | 决定候选 A 是否有信息量 |
 | U5 | Round 4 的**停留时长** | 决定 §1.4 的"`doConfigure()` 未返回"是否成立 |
 | U6 | Round 4 的照片 | 本文件只用口述 |
