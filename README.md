@@ -358,19 +358,31 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > 2. **风险是"较低、可回滚"，不是"零风险"。** 修改 PCI 标志**仍可能造成更早的引导失败或显示异常**，
 >    **不得预设最坏结果只是"无变化"**。
 
-> **⛔ Round 6 已获批并写入卡上（`43ABBAD5…`，52136 B，待实机启动）。**
-> 写入前基线 `021F02B3…` 已核对；`ocvalidate` → No issues found；
-> 语义差异**只有** `boot-args` 一处；`NVRAM → Delete` 的 `boot-args` 项**保留**（下次启动会真正重写）。
+> **🔥 Round 6 已引导一次 —— 日志侧第 1–3 项全部通过，屏幕侧尚无照片。**
+> 日志 [`logs/opencore-2026-10-13-170428.txt`](logs/opencore-2026-10-13-170428.txt)：
+> ✅ `MBA:OUT` 含 `npci=0x3000`；✅ `OC: Prelinked status - Success`；
+> ✅ MAT 三元组 / `DEVMMIO=1` / 7 条 `MMIO devirt` / 四个 VoodooI2C 仍禁用 / RBAR 段
+> 与 Round 4 **逐字相同**；✅ 无 `EB.MM.AKM` / `STOP 0x16` / `No slide values`。
+>
+> **关键新证据**：与 Round 4 逐行比对（行数都是 **746**，差异 17 行），唯一带机制意义的差异是
+> `OC: Not deleting NVRAM … matches add` + `OCVAR: … - ignored, exists`（R4）
+> → **`OC: Deleting NVRAM … - Success` + `OCVAR: Setting NVRAM … - Success`**（R6）
+> ⇒ **`npci=0x3000` 确实被写进 NVRAM 并进入有效命令行**。
+> 其余 15 行全是时间戳 / 句柄地址 / 频率尾数 / `slide=` / `52124→52136 bytes` 等预期噪声，
+> **没有任何新增失败行，也没有任何错误行消失**。
+>
+> **屏幕侧（第 4、5 项）尚无证据** —— 本机没有 17:00 之后的相机照片，也没有停留时长
+> ⇒ **本轮暂不记为"成功"或"失败"**，只记为"**配置生效，且 OpenCore 阶段与 Round 4 无任何回归**"。
+> "是否到达/越过 `PCI configuration begin`"、"是否出现 `PCI configuration end` 或进入 Recovery"
+> **必须**等照片 + 停留时长。详见 [docs/05](docs/05-受控实验记录.md) §7.17。
+
 > **回滚路径保留**：`D:\_backup-round0\config.plist.round4-restored`（= Round 4 原样，`021F02B3…`），
 > 以及原始 `D:\_backup-round0\config.plist.round4`。
 > ```powershell
 > Copy-Item D:\_backup-round0\config.plist.round4-restored D:\EFI\OC\config.plist -Force
 > ```
-> **下一轮启动重点检查**：`MBA:OUT` 含 `npci=0x3000`；`Prelinked status - Success`；
-> MAT / `DEVMMIO=1` / VoodooI2C 等不变量与 Round 4 一致；是否到达或越过 `PCI configuration begin`；
-> 是否出现 `PCI configuration end` 或进入 Recovery；**停止输出时至少观察 10 分钟并拍摄完整屏幕**。
-> 写入记录见 [docs/05](docs/05-受控实验记录.md) §7.16。**若无法启动：先记录证据，再恢复 Round 4，
-> 不自动尝试其它 PCI 参数；未经批准不执行 Round 7。**
+> **若本轮最终确认无法启动：先记录证据，再恢复 Round 4，不自动尝试其它 PCI 参数；
+> 未经批准不执行 Round 7。**
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
