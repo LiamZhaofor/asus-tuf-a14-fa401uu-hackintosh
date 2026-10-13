@@ -197,7 +197,15 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 > 另：`OC: Panic log does not exist` 出现在 `01:129`（boot.efi 启动**之前**），
 > **不能**用来证明内核没有故障。
 
-### 7. 第四轮（已写入卡上，待引导验证）：MAT 内存映射三元组
+> **勘误（第四轮引导后补充）**：本节"停在 `RTC:`"这一读法**已被证伪**。Round 2 的照片证明
+> **同一次启动**里 `RTC: Only single RAM bank (128 bytes)` 之后还有大量输出
+> （`AppleCredentialManager` / `AppleKeyStore` / `CoreAnalyticsHub` / `AppleVTD` … 一直到
+> `PCI configuration begin`）；Round 4 在**同样没有 `npci`** 的条件下也越过了 `RTC:`。
+> 所以 `RTC:` 这一行**不是**独立卡点，本轮的停点是 `IOPCIConfigurator::configure()`。
+> 详见 [受控实验记录](docs/05-受控实验记录.md) §7.11 与
+> [只读分析](docs/06-只读分析与Round5候选.md) §1.3 / §1.4。
+
+### 7. 第四轮：MAT 内存映射三元组（已写入并已实测）
 
 | Quirk | round3（改前） | round4（**卡上现状**） |
 |---|---|---|
@@ -223,8 +231,38 @@ AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
 `Booter.Quirks` 里**恰好只有这 3 个键**变化，其余段落逐字节未变；42 项自检全 PASS）。
 回滚：`D:\_backup-round0\config.plist.round3`。
 
+**实测结果**（`logs/opencore-2026-10-13-095517.txt`）：日志侧 **7 项全部符合预期** ——
+`WRUNPROT 0 / RBMAP 1 / VMAP 1 / RTPERMS 1 / DEVMMIO 1 / MAT support is 1`、
+`MBA:OUT` 无 `npci`、四个 VoodooI2C 条目仍不注入。**仍然没有进入 Recovery。**
+
+> **本轮最重要的新事实**：Round 2（`MBA:OUT` 里**有** `npci=0x2000`，`WRUNPROT 1/RBMAP 0/RTPERMS 0`）
+> 与 Round 4（**无** `npci`，`0/1/1`）**停在完全相同的两行**：
+> `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`。
+> ⇒ 在**这个**停点上，`npci=0x2000` 与这组 MAT 组合**都不足以移动停点**；
+> **不能**排除它们的其它作用，也**不能**据此锁定任何子系统。详见
+> [受控实验记录](docs/05-受控实验记录.md) §7.10 / §7.11。
+
 **执行后即停止** —— 未获批准**不执行 Round 5**，**不**额外修改 MMIO 白名单、ACPI、IOMMU、
-`npci`、BAR 或其它 kext。
+`npci`、BAR 或其它 kext。Round 5 候选（含"先打开 PCI 日志，再做单变量"的排序）见
+**[docs/06-只读分析与Round5候选.md](docs/06-只读分析与Round5候选.md)**。
+
+**本轮只读作业的三条硬结论**（完整证据见 `docs/06`）：
+
+1. **三个 `AE_ALREADY_EXISTS` 已完整闭环**：`\_SB.PCI0.GPP6.WLAN._DSM` 由**DSDT 自己**提供
+   （`dsdt.dsl:15556`），固件 SSDT `WLAN` 重复定义它而中止；那次中止留下的
+   `\_SB.PCI0.GPP6._S0W`（Method）又让固件 SSDT `GpMsSsdt` 的 `Name (_S0W, Zero)` 撞车；
+   本项目注入的 `SSDT-Disable_Network_GPP6` 撞的是同一个 `_DSM`，
+   **因此它是"可证明不可能生效"的注入（D6 升级）**。这三张表都**不创建任何设备节点**
+   （`Device (` 计数为 0），删不掉任何 PCI 设备。
+2. **`SSDT-PLUG-ALT` 与本机固件无命名冲突，但多出 16 个 CPU 对象**：固件自带
+   `SSDT:CPUSSDT` 的 `\_SB.PLTF.C000..C00F`（`ACPI0007`），注入表又在 `\_SB` 下加了
+   16 个 `Processor (C000..C00F)`。作用域不同 → 无 `AE_ALREADY_EXISTS`；但命名空间里
+   有 32 个 `ACPI0007` 节点，说明这个 `-ALT` 版对本机是**冗余**的。
+3. **RTX 4050 的 BAR 不能再当"已确立变量"**：`OCDM: RBAR 2/3 … from 13 to 6` 是
+   **8 GiB → 64 MiB**（索引 n = 2^n MB），但紧接的 `Old BAR` 与 `New BAR` **六个数完全相同**，
+   并打印 `Reprogrammed BARs to original - Success` —— BAR **地址**被恢复成固件原值，
+   而**尺寸位不在这六个 dword 里**。所以"macOS 最终看到多大 BAR1"**无法由本机日志判定**；
+   Windows 报的 8 GiB 只能算旁证。
 
 ---
 
@@ -279,10 +317,11 @@ docs/02-安装手册.md               完整操作手册（BIOS/分区/驱动安
 docs/03-引导排错实录.md            ★ 每次引导卡死的证据、根因、解法（含勘误）
 docs/04-驱动核对.md               kext 逐个审计（版本/架构/顺序/依赖）
 docs/05-受控实验记录.md            ★ 当前在测什么：实验设计、精确 diff、判据、回滚
+docs/06-只读分析与Round5候选.md    ★ 只读 ACPI/PCI 分析、上游案例复核、Round 5 候选（只给 diff）
 hardware/本机配置摘要.md           脱敏后的硬件清单
 efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
 efi/README.md                    kext 清单与用 1401 重建的方法
-logs/opencore-*.txt              7 份真实 OpenCore 引导日志（已脱敏）
+logs/opencore-*.txt              8 份真实 OpenCore 引导日志（已脱敏）
 logs/bootfix-findings.md         1401 诊断器对这些日志的判定
 efi/candidates/                  尚未写入卡上的候选方案（评审用；规则见其 README）
 scripts/sanitize-config.py       把卡上配置脱敏后搬进仓库（字节级保真）
