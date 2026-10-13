@@ -502,7 +502,7 @@ nvidia-smi -q -d MEMORY          # 期望 BAR1 Total = 8192 MiB（本轮已实�
 | **执行顺序**成立 | ✅ A 在 `OcLoadUefiSupport`（OpenCore 启动早期）→ B 在 `AppleMapPrepareBooterState` **之后**、boot.efi 交接之前 |
 | A 会输出 RBAR DEBUG | ✅ 有独立的 `OC: Setting GPU BARs to %d`；且 `ResizeGpuBars()` 本身会打印 `OCDM: RBAR using PciIo` 等 |
 | B 会输出 RBAR DEBUG | ✅ `ResizeGpuBars()` 的 `OCDM:` 行会再打一遍；**⚠️ 但 B 处源码里没有 `OC: Setting GPU BARs` 那一行** |
-| **重要差异 1** | A 传 `Increase = TRUE`，B 传 `Increase = FALSE`（影响 `PCI_BAR_CAP_LIMIT` 的"不许增大"封顶；`Size=0` 时两者都落在最小支持尺寸，但代码路径不同） |
+| **重要差异 1** | A 传 `Increase = TRUE`，B 传 `Increase = FALSE`。该形参**会打进 DEBUG 日志**（`sizing %u inc %d`、`Setting RBAR to %d inc %d`）⇒ **阶段 A 必然是 `inc 1`、阶段 B 必然是 `inc 0`**，这是判别"哪一组输出属于哪个阶段"的**直接依据**（§9.4）。语义上它影响 `PCI_BAR_CAP_LIMIT` 的"不许增大"封顶；`Size=0` 时两者都落在最小支持尺寸，但代码路径不同 |
 | **重要差异 2** | 目前 `ResizeGpuBars = -1` ⇒ 阶段 A 的 `if` **不成立** ⇒ **一次都不调用、一行都不打印**。这正好解释了本机现有日志里**只有一组** RBAR 输出（那组来自阶段 B） |
 | **重要风险** | A 位于 **`OcLoadUefiSupport`，即 OpenCore 启动早期、选择界面绘制之前** ⇒ 一旦 BAR 缩小破坏了 GOP framebuffer，**选择界面本身会受损**（与 issue #23 的记录一致） |
 
@@ -526,13 +526,26 @@ nvidia-smi -q -d MEMORY          # 期望 BAR1 Total = 8192 MiB（本轮已实�
 
 **预期观测（同一次 Apple 启动的 DEBUG 日志里应出现两组 RBAR 输出）**
 
+> **🔑 阶段判别器：日志里的 `inc` 字段**（用户 2026-10-13 修正，**必须按此核对**）
+> `ResizeGpuBars()` 的 DEBUG 里有两处带 `inc %d`：`Setting RBAR to %d inc %d on %d/%d` 与
+> `RBAR %u/%u supports 0x%Lx, sizing %u inc %d results setting from %u to %d`。
+> 该字段就是调用点传入的 **`Increase`** 形参：阶段 A 传 **`TRUE` ⇒ `inc 1`**，
+> 阶段 B 传 **`FALSE` ⇒ `inc 0`**（§9.2）。
+> ⇒ **`inc 1` 的那组必是 UEFI 阶段，`inc 0` 的那组必是 Apple 阶段** —— 这比"靠位置/序号猜"可靠得多。
+
 | 阶段 | 期望看到 | 说明 |
 |---|---|---|
-| **A（UEFI 早期）** | `OC: Setting GPU BARs to 0`<br>`OCDM: RBAR using PciIo`<br>`OCDM: Setting RBAR to 0 inc 0 on 5/43`<br>`OCDM: RBAR 2/3 supports 0x3FC0 … **from 13 to 6**` | 第一次调整：从固件的 8 GiB 缩到 64 MiB |
-| **B（Apple 路径）** | `OCDM: RBAR using PciIo`（第二次）<br>`OCDM: Setting RBAR to 0 inc 0 on 5/43`（第二次）<br>`OCDM: RBAR 2/3 supports 0x3FC0 … **from 6 to 6**` 或 **`from 13 to 6`** | **`from 6 to 6`** ⇒ 阶段 A 的 64 MiB **保持到了 Apple 阶段**；<br>**`from 13 to 6`** ⇒ **没有保持**（但**不能**立刻断定是哪一步恢复或写入失败） |
+| **A（UEFI 早期）** | `OC: Setting GPU BARs to 0`<br>`OCDM: RBAR using PciIo`<br>`OCDM: Setting RBAR to 0 **inc 1** on 5/43`<br>`OCDM: RBAR 2/3 supports 0x3FC0, sizing 0 **inc 1** results setting **from 13 to 6**` | 第一次调整：从固件的 8 GiB 缩到 64 MiB。**`inc 1`** |
+| **B（Apple 路径）** | `OCDM: RBAR using PciIo`（第二次）<br>`OCDM: Setting RBAR to 0 **inc 0** on 5/43`（第二次）<br>`OCDM: RBAR 2/3 supports 0x3FC0, sizing 0 **inc 0** results setting **from 6 to 6**` 或 **`from 13 to 6`** | **`from 6 to 6`** ⇒ 阶段 A 的 64 MiB **保持到了 Apple 阶段**；<br>**`from 13 to 6`** ⇒ **没有保持**（但**不能**立刻断定是哪一步恢复或写入失败）。**`inc 0`** |
+
+> **✅ 模型预验证（① 现有日志已能佐证）**：Round 4 / Round 6 的日志里**只有一组** RBAR 输出，
+> 且全部是 **`inc 0`**：`Setting RBAR to 0 inc 0 on 5/43`、`RBAR 2/3 … sizing 0 inc 0 … from 13 to 6`。
+> 这与"`ResizeGpuBars = -1` ⇒ 阶段 A 的 `if` 不成立 ⇒ 那一组只可能来自阶段 B（`Increase=FALSE`）"
+> **完全一致** ⇒ 说明"`inc` 判别阶段"这个读法在本机是**可用的**。
 
 > **⚠️ 不要去找第二行 `OC: Setting GPU BARs`** —— 阶段 B 的调用点**源码里没有这条 DEBUG**（§9.2）。
-> 阶段 B 的判据**只有** `OCDM: RBAR 2/3 … from X to Y` 与第二次的 `OCDM: RBAR using PciIo`。
+> 阶段 B 的判据**只有** `OCDM: RBAR 2/3 … from X to Y`、第二次的 `OCDM: RBAR using PciIo`
+> 以及 **`inc 0`**。
 
 **阶段 A 在日志里的确切位置（① 用 Round 6 日志定位，可逐行核对）**
 
@@ -554,15 +567,27 @@ Round 6（`ResizeGpuBars = -1`）里该处**没有任何输出**，但上下文�
 即**选择界面绘制之前很久** —— 一旦 BAR 缩小破坏 GOP framebuffer，
 **受影响的是选择界面本身**（与 issue #23 一致）。
 
-**必须确认两组输出对应同一台 RTX 4050**（用户明确要求，不得只看"两行相似字符串"）：
+**必须确认两组输出对应同一台 RTX 4050**（用户明确要求，不得只看"两行相似字符串"）
 
-| 交叉核对项 | 期望值（两侧必须一致） |
-|---|---|
-| RBAR Capability 掩码 | `RBAR 2/3 supports **0x3FC0**`（对应 BAR1：64 MiB…8 GiB） |
-| `Old BAR` 六 dword | `DC000000 0000000C 0000007C 0000000C 0000007E 0000F001` |
-| `RBAR control is … total 3` | `460, total 3` |
-| 设备扫描序号 | `Setting RBAR to 0 inc 0 on **5/43**`（同一枚举顺序 ⇒ 同一设备） |
-| 紧随其后的无 RBAR 设备 | `… on 19/43` + `RBAR is unsupported by device - Not Found` |
+> **⚠️ 不要仅靠设备枚举序号（用户 2026-10-13 补充要求）**
+> **UEFI 阶段可能扫描到多台显示设备**（本机至少还有 780M iGPU `08:00.0` 与 NVIDIA HD Audio `01:00.1`），
+> 且两阶段各自独立调用 `gBS->LocateHandleBuffer(ByProtocol, &gEfiPciIoProtocolGuid)` ——
+> 序号只反映**那一次**枚举的顺序，**不足以证明是同一台设备**。
+> ⇒ **主判据必须是与设备身份绑定的字段**：**RBAR Capability 掩码**与**BAR 地址**；
+> `inc` 只用于判别**阶段**，`序号` 只作辅助一致性检查。
+
+| 交叉核对项 | 期望值（两侧必须一致） | 权重 |
+|---|---|---|
+| **RBAR Capability 掩码** | `RBAR 2/3 supports **0x3FC0**`（恰好对应 BAR1 的 64 MiB…8 GiB 支持集） | **主判据**（与设备+具体 BAR 绑定） |
+| 整套能力集 | `RBAR 1/3 supports **0x10**` → BAR0(16 MiB)、`RBAR 3/3 supports **0x20**` → BAR3(32 MiB) | **主判据**（三件套同时吻合才排他） |
+| **`Old BAR` 六 dword** | `DC000000 0000000C 0000007C 0000000C 0000007E 0000F001` | **主判据**（BAR 地址布局与设备绑定） |
+| `RBAR control is … total 3` | `460, total 3`（Control 原值 + 可调 BAR 数量） | 强旁证 |
+| **`inc` 字段** | 阶段 A = **`inc 1`**；阶段 B = **`inc 0`** | 判别**阶段**（不是判别设备） |
+| 设备扫描序号 | `… on **5/43**`（两次一致） | **仅辅助**：一致不证明同一设备，不一致也不必然说明换了设备 |
+| 紧随其后的无 RBAR 设备 | `… on 19/43` + `RBAR is unsupported by device - Not Found` | 辅助：两侧枚举序列形状应相同 |
+
+⇒ 若两组输出的 **Capability 掩码 / 能力集 / `Old BAR` 六 dword** 有任何一项不吻合，
+就必须按"**可能是不同显示设备**"处理，**不得**把它们当作同一台 GPU 的前后两阶段。
 
 **结果判定（用户第五阶段，原样写死）**
 
