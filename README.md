@@ -391,14 +391,44 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > —— 此前"8 GiB BAR 恰好顶到 DSDT 64 位窗口上限"的推论**前提被推翻**；
 > ② **`nvidia-smi -q -d MEMORY` 是本机可用、快速、只读的 BAR1 读数仪**，本轮实测
 > **BAR1 Total = 8192 MiB**，与 `plan.json` 的 `bar1_bytes = 8589934592` 一致
-> （也证明 1401 扫描里的 `"Resizable BAR": "Disabled"` 是**错误读数**）；
+> （也证明 1401 扫描里的 `"Resizable BAR": "Disabled"` 是**错误读数**）。
+> **⚠️ 证据等级限定**：它反映的**只是 Windows 那条路径**（当时 `ResizeGpuBars=-1`，OpenCore 什么都没做），
+> **不能**用来证明 **Apple 启动路径**的缩容结果 —— 那是**另一个调用点**（下条）。
 > ③ **`New BAR == Old BAR` 只能说明地址寄存器相同，不能证明 BAR size 没变** ——
 > OpenCore 从不读回写后的 Control 寄存器，所以"显卡是否真的采用了 64 MiB BAR"**目前仍是 UNKNOWN**。
 >
-> **推荐 Round 7 = 候选 A**：单变量把 `UEFI → Quirks → ResizeGpuBars` 由 `-1` 改为 `0`，
-> 然后**经 OpenCore 引导 Windows**，用 `nvidia-smi -q -d MEMORY` 读回 BAR1 尺寸
-> —— 若变成 64 MiB 则证明 OpenCore 的 RBAR 写入**确实生效**，若仍是 8192 MiB 则需用
-> Linux 只读 `lspci -xxxx -s 01:00.0` 判别。**只给候选，未写入 U 盘；等批准。**
+> **🔥 Round 7（已写入卡上，待实机启动）—— 两阶段日志对照**
+> ① 本机 OpenCore 的**确切源码已定位**：卡上 `OpenCore.efi` = Dortania build-repo 的
+> **`OpenCorePkg-963025f`**（`1401/.../mirror.json:397` 的 pin）—— 上游 **没有 `1.0.9` tag**，
+> 必须按 **commit `963025f`** 取源码。
+> ② 两个调用点**已在 `963025f` 逐字确认**：
+> **阶段 A** `Library/OcMainLib/OpenCoreUefi.c:982-987`（函数 `OcLoadUefiSupport`，**选择界面之前**）
+> → `DEBUG("OC: Setting GPU BARs to %d")` + `ResizeGpuBars(…, TRUE, …)`；
+> **阶段 B** `Library/OcAfterBootCompatLib/ServiceOverrides.c:1255-1259`
+> → `ResizeGpuBars(ResizeAppleGpuBars, FALSE, …)` —— **该处源码没有 `OC: Setting GPU BARs` 这行**。
+> ③ 六项严格区分：目标 size **已算出**；Control 写入**已发送但返回状态未被捕获**
+> （`:323` 裸调用，无 `Status =`；`SetResizableBarOnDevicePciIo` 末尾**无条件 `return EFI_SUCCESS`**）；
+> **写后 BarSize 从不读回**；Apple 阶段读回是本轮要造的观测；macOS 内核实际拿到的资源**不可观测**。
+> ⇒ **`Reprogrammed BARs to original - Success` 只证明"地址写回"那次 `Pci.Write` 成功。**
+>
+> **唯一改动**：`UEFI → Quirks → ResizeGpuBars`：`-1` → **`0`**（**1 行**，1-based 2285；
+> `021F02B3…`（52124 B）→ **`58E78A12C8102AF7A5DD3B2D7417BE891B17EFC78FF0817C99F69C6BC7A78CA3`**（52123 B）；
+> `ocvalidate` 1.0.9 → **No issues found**；`ResizeAppleGpuBars=0`、`ResizeUsePciRbIo=false`、
+> MAT/`DevirtualiseMmio`/`SetupVirtualMap`/`MmioWhitelist`/`boot-args`/SMBIOS **全部未动**）。
+> **独立可回退副本**：整棵 `D:\EFI` → `C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI`。
+> **⚠️ 有风险、不是零风险**：阶段 A 在**选择界面绘制之前**执行 ⇒ 可能破坏 GOP framebuffer，
+> **导致难以/无法选中目标系统**（与 issue #23 一致）；对固件/Windows/内置盘**无持久影响**。
+> ```powershell
+> Copy-Item D:\_backup-round0\config.plist.round4-pre-r7 D:\EFI\OC\config.plist -Force      # A 配置回滚
+> robocopy C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI D:\EFI /MIR   # B 整棵 EFI
+> ```
+> 若选择器损坏/黑屏：**优先用固件启动菜单直接进 Windows**，不盲目按键、不叠加修改，记为「实验无法完成」。
+>
+> **下次启动请对照**：阶段 A `OC: Setting GPU BARs to 0` + `RBAR 2/3 … from 13 to 6`；
+> 阶段 B 第二次 `OCDM: RBAR using PciIo` + `RBAR 2/3 … **from 6 to 6**`（⇒ 保持住了）
+> 或 **`from 13 to 6`**（⇒ 没保持，先查原因、**不要**立刻改 BIOS ReBAR）；
+> 并核对两组输出确为同一台 RTX 4050（Capability `0x3FC0`、`Old BAR` 六 dword、
+> `Setting RBAR … on 5/43`）。**详细判定规则见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.4。**
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，

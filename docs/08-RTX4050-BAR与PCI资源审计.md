@@ -140,6 +140,18 @@ BAR1 Memory Usage
 * ⇒ **`nvidia-smi -q -d MEMORY` 是本机可用的、快速的、只读的 BAR1 尺寸读数仪**
   （不需要额外硬件、不需要重启、不写任何寄存器）。这是本轮最有用的工具发现。
 
+> **⚠️ 证据等级限定（用户 2026-10-13 要求，必须遵守）**
+>
+> 这条读数的**证明力仅限 Windows 启动路径**：
+> * 它反映的是 **Windows 这次启动**时 GPU 的 BAR1 状态，
+>   即"**固件 POST 分配的结果**"（因为 Windows 路径上 OpenCore 的
+>   `UEFI.Quirks.ResizeGpuBars` 当时是 `-1`，**什么都没做**）。
+> * 它**不能**用来证明 **Apple 启动路径**上的缩容结果 —— 那是由**另一个调用**
+>   （`ServiceOverrides.c` 的 `ResizeAppleGpuBars`，**只对 Apple OS 生效**、发生在**不同阶段**）做的，
+>   两者是**两个不同的调用点**，不能互相代替（见 §9.1）。
+> * ⇒ **不得**用"Windows 下 BAR1 = 8192 MiB"去论证"OpenCore 在 Apple 路径上的缩容成功/失败"。
+>   它只能作为**固件基线**与**读数仪可用性**的证据（等级 ①，但**仅限该路径**）。
+
 ### 2.6 ⚠️ ② 1401 扫描的 `"Resizable BAR": "Disabled"` **不可信**
 
 `plan.json` 的 `hardware.GPU[0]` 写：
@@ -434,3 +446,147 @@ nvidia-smi -q -d MEMORY          # 期望 BAR1 Total = 8192 MiB（本轮已实�
 **状态：只给候选与风险评估，未写入 U 盘。等批准。**
 未获批准前**不**修改 BIOS / ReBAR（BIOS 项）/ `MmioWhitelist` / Windows EFI / BCD /
 内置磁盘分区，**不**自行新增 SSDT，**不**替换 `OpenCore.efi`。
+
+> **⚠️ 本节（§8）的方案形态已被用户 2026-10-13 的修正取代**：§8 里"用 Windows
+> `nvidia-smi` 读回"的形态**不再成立**（理由见 §2.5 的证据等级限定与 §9.1）。
+> **Round 7 的最终形态见 §9**：改为**在同一次 Apple 启动的 OpenCore DEBUG 日志里做两阶段对照**。
+
+---
+
+## 9. Round 7 定稿：两阶段 RBAR 日志对照（**已写入卡上，待实机启动**）
+
+### 9.1 本机 OpenCore 的**确切源码版本**已定位（①+②）
+
+* ① 卡上 `OpenCore.efi` 自报 `DBG-109-2026-10-10`；② `ocvalidate` 报
+  "only compatible with OpenCore version 1.0.9"。
+* ② **上游 `acidanthera/OpenCorePkg` 并没有 `1.0.9` tag**（最新 tag 是 `1.0.8`）。
+  真正的来源在 1401 自己的镜像清单里：
+  `1401/engine/app/p1401/mirror.json:397-399`
+  ```json
+  "https://github.com/dortania/build-repo/releases/download/OpenCorePkg-963025f/OpenCore-1.0.9-DEBUG.zip": {
+    "sha256": "4a35bc9409d4bbacb7a9e72127be6cc4c677b22a0399a4c430e21460e65df886",
+    "size": 11837410
+  }
+  ```
+  ⇒ 本机 OpenCore = **Dortania build-repo 的 `OpenCorePkg-963025f`**，
+  即 **OpenCorePkg 提交 `963025f`** 的构建（不是任何 release tag）。
+* ⇒ 因此"实际构建对应的源码版本"**是可查的**：以下三处都已按 **commit `963025f`** 取回并逐行核对。
+
+### 9.2 两个调用点：**确认存在、顺序成立**（② commit 963025f）
+
+**阶段 A —— UEFI 早期**，`Library/OcMainLib/OpenCoreUefi.c:982-987`
+（所在函数为 **`OcLoadUefiSupport`**，行 900 起）：
+```c
+  if (  (Config->Uefi.Quirks.ResizeGpuBars >= 0)
+     && (Config->Uefi.Quirks.ResizeGpuBars < PciBarTotal))
+  {
+    DEBUG ((DEBUG_INFO, "OC: Setting GPU BARs to %d\n", Config->Uefi.Quirks.ResizeGpuBars));
+    ResizeGpuBars (Config->Uefi.Quirks.ResizeGpuBars, TRUE, Config->Uefi.Quirks.ResizeUsePciRbIo);
+  }
+```
+
+**阶段 B —— Apple 启动路径**，`Library/OcAfterBootCompatLib/ServiceOverrides.c:1255-1259`：
+```c
+    if (  (BootCompat->Settings.ResizeAppleGpuBars >= 0)
+       && (BootCompat->Settings.ResizeAppleGpuBars < PciBarTotal))
+    {
+      ResizeGpuBars (BootCompat->Settings.ResizeAppleGpuBars, FALSE, BootCompat->Settings.ResizeUsePciRbIo);
+    }
+```
+
+**核对结论（逐条）**：
+
+| 核对项 | 结果 |
+|---|---|
+| 两处调用**都存在** | ✅ 均在 commit `963025f` 原文中逐字确认 |
+| **执行顺序**成立 | ✅ A 在 `OcLoadUefiSupport`（OpenCore 启动早期）→ B 在 `AppleMapPrepareBooterState` **之后**、boot.efi 交接之前 |
+| A 会输出 RBAR DEBUG | ✅ 有独立的 `OC: Setting GPU BARs to %d`；且 `ResizeGpuBars()` 本身会打印 `OCDM: RBAR using PciIo` 等 |
+| B 会输出 RBAR DEBUG | ✅ `ResizeGpuBars()` 的 `OCDM:` 行会再打一遍；**⚠️ 但 B 处源码里没有 `OC: Setting GPU BARs` 那一行** |
+| **重要差异 1** | A 传 `Increase = TRUE`，B 传 `Increase = FALSE`（影响 `PCI_BAR_CAP_LIMIT` 的"不许增大"封顶；`Size=0` 时两者都落在最小支持尺寸，但代码路径不同） |
+| **重要差异 2** | 目前 `ResizeGpuBars = -1` ⇒ 阶段 A 的 `if` **不成立** ⇒ **一次都不调用、一行都不打印**。这正好解释了本机现有日志里**只有一组** RBAR 输出（那组来自阶段 B） |
+| **重要风险** | A 位于 **`OcLoadUefiSupport`，即 OpenCore 启动早期、选择界面绘制之前** ⇒ 一旦 BAR 缩小破坏了 GOP framebuffer，**选择界面本身会受损**（与 issue #23 的记录一致） |
+
+### 9.3 六项严格区分（用户第三阶段要求）
+
+| # | 事项 | ② 源码依据（commit 963025f） | 本机是否已证 |
+|---|---|---|---|
+| 1 | **成功计算目标 size** | `SetResizableBar.c:272-297` 算出 `Bit` | ✅ ① 日志 `results setting from 13 to 6` |
+| 2 | **发送 RBAR Control 写入** | `SetResizableBar.c:322-329` 写 `ResizableBarControl`，随后 `ChangedBars = TRUE`（`:331`） | ⚠️ 无直接证据（无日志），只能③推论"已发送" |
+| 3 | **PCI 写操作返回成功** | **❗ 该写操作的返回状态根本没有被捕获**：`:323` 是裸调用 `PciIo->Pci.Write(...)`，**没有 `Status =`**；而 `SetResizableBarOnDevicePciIo` 末尾 `:381` **无条件 `return EFI_SUCCESS`** | ❌ **从未被检查、从未被记录** ⇒ **未知** |
+| 4 | **写后读取到新的 BarSize** | **源码从不读回 BarSize**（只读回 6 个 BAR 地址 dword：`:337`） | ❌ **不存在** |
+| 5 | **Apple 阶段读取到新的 BarSize** | 阶段 B 的 `ResizeGpuBars()` 会**重新读** `Entries[i].ResizableBarControl.Bits.BarSize`（就是日志里 `from N` 的来源） | ⏳ **这正是 Round 7 要造的观测** |
+| 6 | **macOS 内核实际获得的 BAR 资源** | —— | ❌ **不可观测**（`docs/06` §7） |
+
+**⇒ `OCDM: Reprogrammed BARs to original - Success` 究竟证明了什么？**
+**只证明一件事**：把 6 个 BAR **地址** dword 写回原值的那个 `Pci.Write`（`:370`）返回了 `EFI_SUCCESS`。
+它**不证明**尺寸写入成功，**不证明** BAR 被改成 64 MiB，也**不证明**任何阶段读到了新尺寸。
+（另外：读操作 `Pci.Read` 的返回状态**是**被检查的，例如 `:60/:220` 会打印 `Capability I/O error`。）
+
+### 9.4 实验设计（已执行：单变量 `UEFI.Quirks.ResizeGpuBars: -1 → 0`）
+
+**预期观测（同一次 Apple 启动的 DEBUG 日志里应出现两组 RBAR 输出）**
+
+| 阶段 | 期望看到 | 说明 |
+|---|---|---|
+| **A（UEFI 早期）** | `OC: Setting GPU BARs to 0`<br>`OCDM: RBAR using PciIo`<br>`OCDM: Setting RBAR to 0 inc 0 on 5/43`<br>`OCDM: RBAR 2/3 supports 0x3FC0 … **from 13 to 6**` | 第一次调整：从固件的 8 GiB 缩到 64 MiB |
+| **B（Apple 路径）** | `OCDM: RBAR using PciIo`（第二次）<br>`OCDM: Setting RBAR to 0 inc 0 on 5/43`（第二次）<br>`OCDM: RBAR 2/3 supports 0x3FC0 … **from 6 to 6**` 或 **`from 13 to 6`** | **`from 6 to 6`** ⇒ 阶段 A 的 64 MiB **保持到了 Apple 阶段**；<br>**`from 13 to 6`** ⇒ **没有保持**（但**不能**立刻断定是哪一步恢复或写入失败） |
+
+> **⚠️ 不要去找第二行 `OC: Setting GPU BARs`** —— 阶段 B 的调用点**源码里没有这条 DEBUG**（§9.2）。
+> 阶段 B 的判据**只有** `OCDM: RBAR 2/3 … from X to Y` 与第二次的 `OCDM: RBAR using PciIo`。
+
+**必须确认两组输出对应同一台 RTX 4050**（用户明确要求，不得只看"两行相似字符串"）：
+
+| 交叉核对项 | 期望值（两侧必须一致） |
+|---|---|
+| RBAR Capability 掩码 | `RBAR 2/3 supports **0x3FC0**`（对应 BAR1：64 MiB…8 GiB） |
+| `Old BAR` 六 dword | `DC000000 0000000C 0000007C 0000000C 0000007E 0000F001` |
+| `RBAR control is … total 3` | `460, total 3` |
+| 设备扫描序号 | `Setting RBAR to 0 inc 0 on **5/43**`（同一枚举顺序 ⇒ 同一设备） |
+| 紧随其后的无 RBAR 设备 | `… on 19/43` + `RBAR is unsupported by device - Not Found` |
+
+**结果判定（用户第五阶段，原样写死）**
+
+| 观察 | 只能得出的结论 | 下一步 |
+|---|---|---|
+| macOS **越过** `PCI configuration` | 记录新日志并**复测**；**不能**立即认定 BAR 是唯一根因 | 复测确认 |
+| 阶段 B 显示 **`from 6 to 6`**，但仍卡在 PCI | **早期 64 MiB 缩容不足以**让该配置进入 Recovery；**不能排除** macOS 后续重新分配资源 | 记录；不自动推进 |
+| 阶段 B 仍为 **`from 13 to 6`** | **重点调查"为何早期缩容没有保持"**，而**不是**立即改 BIOS ReBAR | 记录；单独立项 |
+| **GOP 损坏导致无法选择系统** | 本轮记为「**实验无法完成**」 | **恢复基线**，不擅自执行后续实验 |
+
+### 9.5 写入记录（条件逐条满足）
+
+| 条件 | 结果 |
+|---|---|
+| 1. Round 4 基线 SHA-256 == `021F02B3…` | ✅ 写入前实测相符（52124 B） |
+| 2. 独立测试 U 盘 / 可独立回退的 EFI 副本 | ✅ **本机只有 D: 一个可移动盘** ⇒ 采用"**可独立回退的 EFI 副本**"路线：整棵 `D:\EFI` 已完整复制到 **`C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI`**（137 文件 / 12,206,164 B；副本内 `config.plist` = `021F02B3…`、`OpenCore.efi` = `1569CD1D…` 与卡上一致） |
+| 3. 只改 `UEFI.Quirks.ResizeGpuBars` 一个整数 | ✅ **1 行**（1-based **2285**），52124 → **52123** B |
+| 4. 与实际构建匹配的 `ocvalidate` | ✅ `01e07a898e65-ocvalidate.exe`（1.0.9 DEBUG）→ **No issues found**（exit 0） |
+| 5. 保留不经 OpenCore 直接启动 Windows 的方案 | ✅ **未修改 Windows EFI / BCD**（全程未动）⇒ 固件启动菜单（Esc/F8）里的 Windows 项**原样可用** |
+| 6. 不改 BIOS / Windows EFI / BCD / 内置分区 | ✅ 未动 |
+| 7. 不改 `ResizeAppleGpuBars` / `ResizeUsePciRbIo` / 其它 Booter 参数 | ✅ 脚本逐项断言：`ResizeAppleGpuBars=0`、`ResizeUsePciRbIo=false`、MAT 三元组、`DevirtualiseMmio=true`、`SetupVirtualMap=true`、`MmioWhitelist=[]`、`boot-args` 不变（仍无 `npci`） |
+| 8. 不换 `OpenCore.efi` / 不加驱动 | ✅ `OpenCore.efi` SHA 写入前后均为 `1569CD1D183C5EE9FDA2ECED767A4B2EFA307E6EDFCF2A50109C9657098671FF` |
+| 语义差异 | ✅ 恰好 `UEFI.Quirks.ResizeGpuBars` 一项 |
+| **写入后卡上 SHA-256** | **`58E78A12C8102AF7A5DD3B2D7417BE891B17EFC78FF0817C99F69C6BC7A78CA3`**（52123 B） |
+| 脚本 | `audit/apply-round7-stick.py`（任一预条件不满足即拒绝写入；原子替换） |
+
+**风险（**不是零风险**）**：阶段 A 在**选择界面绘制之前**执行（§9.2）⇒ 若 BAR 缩小破坏 GOP framebuffer，
+**可能难以或无法选中目标系统**。对固件、Windows、内置盘**无持久影响**（重启后由固件重新枚举）。
+
+**回滚（两条，随时可用）**
+```powershell
+# A. 只回滚配置
+Copy-Item D:\_backup-round0\config.plist.round4-pre-r7 D:\EFI\OC\config.plist -Force
+# B. 整棵 EFI 回滚（含 OpenCore.efi 与全部 kext/ACPI/driver）
+robocopy C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI D:\EFI /MIR
+# 回滚后 config.plist SHA-256 必须回到 021F02B3B46953021FF31835518790DD6BEB57074BE822D127305434581815E4（52124 B）
+```
+若**选择器损坏或完全黑屏**：**优先用备用启动路径**（固件启动菜单直接进 Windows）恢复，
+**不盲目按键、不继续叠加修改**；本轮记为「实验无法完成」。
+
+**下次启动请记录**：`OC: Setting GPU BARs to 0`（阶段 A）、两组 `OCDM: RBAR using PciIo`、
+阶段 A 与阶段 B 的 `RBAR 2/3 … from X to Y`、`Old BAR` 六 dword、`5/43` 设备序号、
+以及是否出现 `[ PCI configuration end, … ]`；若停止输出**至少观察 10 分钟并拍摄完整屏幕**。
+
+**状态：Round 7 已写入卡上（`58E78A12…`），待实机启动。**
+**未经批准不执行 Round 8**；**不**修改 BIOS / ReBAR（BIOS 项）/ `MmioWhitelist` /
+Windows EFI / BCD / 内置分区；**不**换 `OpenCore.efi`、**不**加驱动、**不**加 SSDT。
