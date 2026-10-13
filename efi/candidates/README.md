@@ -11,7 +11,13 @@
 
 | 候选 | 相对卡上状态 | 状态 |
 |---|---|---|
-| [`round6-npci-0x3000.plist`](round6-npci-0x3000.plist) | `NVRAM → Add → 7C436110-…:boot-args` 末尾追加 ` npci=0x3000`（**仅此 1 行**，1-based 行号 1920；52124 → 52136 B） | **待批准**（Round 6 唯一候选，见 `docs/07` §8 与 §10） |
+| *（当前无待批准候选）* | — | — |
+
+> `round6-npci-0x3000.plist` 已于 **2026-10-13 获批并写入卡上**
+> （`NVRAM → Add → 7C436110-…:boot-args` 末尾追加 ` npci=0x3000`，**只此 1 行**，1-based 行号 1920；
+> 卡上 `021F02B3…` → `43ABBAD5…`，52124 → 52136 B，`ocvalidate` → No issues found），
+> 因此转正为 `efi/config.plist` 并从本目录移除。
+> 写入记录、两条判据修正与启动后检查清单见 `docs/05` §7.16；候选评估见 `docs/07` §8 / §10。
 
 > `round5B-devirtualisemmio-false.plist` 已于 **2026-10-13 获批并写入卡上**
 > （`Booter.Quirks.DevirtualiseMmio`：`true` → `false`，**只此 1 行**，1-based 行号 171；

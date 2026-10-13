@@ -343,12 +343,34 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > 再试 `0x3000`。测完就能把结论从"`0x2000` 不足"升级为
 > "**整条 `npci` 阶梯都不足以进入 Recovery**"，从而把怀疑范围**干净地**压到
 > `configure()` 内部的资源/BAR 分配上。
-> **不预设它比 `npci=0x2000` 更有效** —— 源码上两者的唯一差别只是多清 `kIOPCIConfiguratorTBMSIEnable`，
-> 而该位只作用于 Thunderbolt 隧穿 MSI 路径（IOPCIFamily-681.140.3 `IOPCIBridge.cpp:5723`），
-> 与本机卡点先验关联度低；它的价值是**消除性**的。
+> **不预设它比 `npci=0x2000` 更有效。** 就这两个 boot-arg 而言，`0x3000` 相对 `0x2000`
+> 只多清一位 `kIOPCIConfiguratorTBMSIEnable`（只作用于 Thunderbolt 隧穿 MSI 路径，
+> IOPCIFamily-681.140.3 `IOPCIBridge.cpp:5723`），与本机卡点先验关联度低；它的价值是**消除性**的。
+>
+> **⚠️ 判据修正（批准 Round 6 时要求）**
+> 1. **不得把 Round 6 描述成"只测试 `TBMSIEnable`"。** 基线是 **Round 4（无 `npci`）**，
+>    所以 `npci=0x3000` **同时清掉 `PFM64` 与 `TBMSIEnable` 两位**。
+>    而且 Round 2 虽然用过 `npci=0x2000`，但**那轮 MAT 三元组不同**（`1/0/0` vs `0/1/1`）
+>    ⇒ **不能**把 Round 2 与 Round 6 当作"只差一位"的严格对照。
+>    * **若 Round 6 成功**：只能说明这两位（或其中之一）有效；**要定位到哪一位，必须在同一基线上再做单一位实验**。
+>    * **若 Round 6 失败**：只能记为"**`npci=0x3000` 在本配置下不足以解决启动问题**"，
+>      **不能**完全排除 PCI 参数的影响。
+> 2. **风险是"较低、可回滚"，不是"零风险"。** 修改 PCI 标志**仍可能造成更早的引导失败或显示异常**，
+>    **不得预设最坏结果只是"无变化"**。
 
-> **⛔ 卡上现为 Round 4；Round 6 未写入。** 未获批准前**不**修改 EFI / BIOS / 显卡 BAR /
-> `MmioWhitelist` / Windows EFI / BCD / 分区，**不**重新生成覆盖整个 EFI。
+> **⛔ Round 6 已获批并写入卡上（`43ABBAD5…`，52136 B，待实机启动）。**
+> 写入前基线 `021F02B3…` 已核对；`ocvalidate` → No issues found；
+> 语义差异**只有** `boot-args` 一处；`NVRAM → Delete` 的 `boot-args` 项**保留**（下次启动会真正重写）。
+> **回滚路径保留**：`D:\_backup-round0\config.plist.round4-restored`（= Round 4 原样，`021F02B3…`），
+> 以及原始 `D:\_backup-round0\config.plist.round4`。
+> ```powershell
+> Copy-Item D:\_backup-round0\config.plist.round4-restored D:\EFI\OC\config.plist -Force
+> ```
+> **下一轮启动重点检查**：`MBA:OUT` 含 `npci=0x3000`；`Prelinked status - Success`；
+> MAT / `DEVMMIO=1` / VoodooI2C 等不变量与 Round 4 一致；是否到达或越过 `PCI configuration begin`；
+> 是否出现 `PCI configuration end` 或进入 Recovery；**停止输出时至少观察 10 分钟并拍摄完整屏幕**。
+> 写入记录见 [docs/05](docs/05-受控实验记录.md) §7.16。**若无法启动：先记录证据，再恢复 Round 4，
+> 不自动尝试其它 PCI 参数；未经批准不执行 Round 7。**
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
