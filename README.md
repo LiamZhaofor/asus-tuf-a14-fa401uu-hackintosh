@@ -272,18 +272,29 @@ AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
 **⛔ 执行后即停止** —— 未获批准**不执行 Round 5**，**不**修改 MMIO 白名单、ACPI、IOMMU、
 `npci`、BAR 或其它 kext。
 
-**Round 5 唯一推荐候选**（详见 [docs/06](docs/06-只读分析与Round5候选.md) §4.6 与 §7）：
-**单独把 `Booter → Quirks → DevirtualiseMmio` 从 `true` 改成 `false`**，其余一概不动。
-候选文件：[`efi/candidates/round5B-devirtualisemmio-false.plist`](efi/candidates/round5B-devirtualisemmio-false.plist)
-（`ocvalidate` 1.0.9 → No issues found；与卡上相比**只有 1 行**不同，1-based 行号 **171**）。
+**Round 5B 已获批并写入卡上（待引导验证）** —— 详见 [docs/05](docs/05-受控实验记录.md) §7.12 与
+[docs/06](docs/06-只读分析与Round5候选.md) §4.6：
+
+* **唯一改动**：`Booter → Quirks → DevirtualiseMmio`：`true` → **`false`**（**只此 1 行**，
+  1-based 行号 **171**）。
+* 卡上 `021F02B3…`（52124 B）→ **`34605D9D…`（52125 B）**，读回哈希与批准前给出的预测值**完全一致**。
+* `ocvalidate` 1.0.9 DEBUG（对卡上文件）→ **No issues found**。
+* 备份：`D:\_backup-round0\config.plist.round4`；回滚一步命令见 `docs/05` §7.12。
+* 未使用 GitHub 脱敏候选覆盖真实 EFI —— **SMBIOS 与备份逐字节相同**。
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
 > 而 macOS 15.6 时代的 tag（≤ `681.140.3`，2025-08-20）**全都没有**；
 > 本项目此前引用的本地源码 **sha256 与 `IOPCIFamily-726.0.5` 逐字节相同**，
-> 即被误当成了 15.6 的代码。⇒ 在实机上追加 `pci_log=…` 是**空操作**，
-> 该候选**已撤销**。同时确认本机**没有**串口 / `kdp` / 任何"硬卡死后仍能取回内核输出"的通道，
+> 即被误当成了 15.6 的代码。⇒ 在实机上追加 `pci_log=…` 是**空操作**，该候选**已撤销**。
+> 同时确认本机**没有**串口 / `kdp` / 任何"硬卡死后仍能取回内核输出"的通道，
 > 唯一可用的采集方式仍是**拍照 + 停留时长**。完整审计见 docs/06 §7。
+
+> **判据修正（2026-10-13 批准时要求）**：
+> ① 出现 `EB.MM.AKM`/`STOP 0x16` 等早期错误，**只**说明该设置影响了内存映射或启动兼容性，
+> **不能**据此推断固件运行期访问了某块 MMIO，**不能**据此确定 `MmioWhitelist` 地址；
+> ② OpenCore DEBUG 日志是早期错误的主要证据来源，**但不保证硬卡死时都能完整写盘** ——
+> 缺日志时仍须结合屏幕照片判断。
 
 **本轮只读作业的三条硬结论**（完整证据见 `docs/06`）：
 
