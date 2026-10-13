@@ -424,11 +424,30 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > ```
 > 若选择器损坏/黑屏：**优先用固件启动菜单直接进 Windows**，不盲目按键、不叠加修改，记为「实验无法完成」。
 >
-> **下次启动请对照**：阶段 A `OC: Setting GPU BARs to 0` + `RBAR 2/3 … from 13 to 6`；
-> 阶段 B 第二次 `OCDM: RBAR using PciIo` + `RBAR 2/3 … **from 6 to 6**`（⇒ 保持住了）
-> 或 **`from 13 to 6`**（⇒ 没保持，先查原因、**不要**立刻改 BIOS ReBAR）；
-> 并核对两组输出确为同一台 RTX 4050（Capability `0x3FC0`、`Old BAR` 六 dword、
-> `Setting RBAR … on 5/43`）。**详细判定规则见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.4。**
+> **✅ Round 7 已引导并判读完毕**（日志 [`logs/opencore-2026-10-13-213656.txt`](logs/opencore-2026-10-13-213656.txt)）：
+> **两组 RBAR 输出都出现了，位置与预测逐字命中** ——
+> 阶段 A：`00:283 OC: Setting GPU BARs to 0`（紧跟 `00:280 OC: AVX enabled - 1` 之后）、
+> `Setting RBAR to 0 **inc 1** on 5/43`、`RBAR 2/3 … sizing 0 **inc 1** … **from 13 to 6**`、`New BAR …`、`Reprogrammed … - Success`；
+> 阶段 B：`14:884 RBAR using PciIo`（第二次，**无** `Setting GPU BARs`，与源码一致）、
+> `Setting RBAR to 0 **inc 0** on 5/43`、**`RBAR 2/3 … sizing 0 inc 0 … from 6 to 6`**。
+> 两组的能力掩码组（`0x10`/`0x3FC0`/`0x20`）、`Old BAR` 六 dword、`RBAR control is 460, total 3`
+> **逐字相同** ⇒ **确认同属 `01:00.0` 的 RTX 4050**。
+>
+> **结论**：① **阶段 B 一次写都没做**（`New BAR` 计数 **0**、`Reprogrammed` **0** ⇒ `from 6 to 6` 是**零写入的纯读回**）；
+> ② ⇒ **OpenCore 的 RBAR Control 写入确实生效**，`docs/08` §3.3 的二义性解决：
+> **"GPU 忽略/锁住写入"被证伪**，`New BAR == Old BAR` 的真实原因是**设备保留了 BAR 内容**；
+> ③ **跨轮次推论**：R4/R6 虽无阶段 A，但**阶段 B 自己把 13 写成了 6**（`New BAR`+`Reprogrammed` 为证）
+> ⇒ **R2/R4/R5B/R6/R7 的 macOS 全都跑在 64 MiB BAR1 之下** ⇒ **"BAR1 太大"从来不是当时的条件**，
+> **整条 BAR 轴对本停点的嫌疑大幅下降**；
+> ④ **屏幕仍停在** `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`
+> （照片 `IMG20261013214007.jpg`，与 R4/R6 逐行一致）⇒ **早期 64 MiB 缩容不足以**进入 Recovery，
+> **不能排除** macOS 后续重新分配资源；
+> ⑤ **GOP 风险本次未触发**（引导正常到达 Apple 路径并跑到 `EXITBS`）—— 只说明"本次未触发"，**不等于无风险**。
+>
+> **下一轮首选（待批准）= 候选 B**：`Booter → Quirks → ResizeAppleGpuBars: 0 → -1`
+> —— 让 macOS **第一次**看到固件的 **8 GiB** BAR1（该条件从未被测过），
+> 且它在 **Booter 阶段（选择界面之后）**生效 ⇒ **无选择界面被破坏的风险**。
+> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §F 与 [docs/05](docs/05-受控实验记录.md) §7.20。
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，

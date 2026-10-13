@@ -632,6 +632,120 @@ robocopy C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI D:\
 阶段 A 与阶段 B 的 `RBAR 2/3 … from X to Y`、`Old BAR` 六 dword、`5/43` 设备序号、
 以及是否出现 `[ PCI configuration end, … ]`；若停止输出**至少观察 10 分钟并拍摄完整屏幕**。
 
-**状态：Round 7 已写入卡上（`58E78A12…`），待实机启动。**
+**状态：Round 7 已写入卡上并已引导一次 —— 结果见 §9.6。**
 **未经批准不执行 Round 8**；**不**修改 BIOS / ReBAR（BIOS 项）/ `MmioWhitelist` /
 Windows EFI / BCD / 内置分区；**不**换 `OpenCore.efi`、**不**加驱动、**不**加 SSDT。
+
+### 9.6 Round 7 引导结果（**已回填**）—— **两阶段读回成功，H1 成立**
+
+日志：`logs/opencore-2026-10-13-213656.txt`（卡上 `D:\opencore-2026-10-13-213656.txt`，
+262144 B，未写满：首字节 0 偏移植 68834，756 行，末行 `16:477 AAPL: #[EB|LOG:EXITBS:START]`）。
+
+#### A. 两组输出（逐字，①）
+
+**阶段 A（UEFI 早期，`00:283`–`00:314`）** —— 位置与 §9.4 的预测**完全一致**
+（紧跟在 `OC: AVX enabled - 1` 之后、`OC: Got 4 drivers` 之前）：
+
+```
+00:280  OC: AVX enabled - 1
+00:283  OC: Setting GPU BARs to 0                      ← 预测命中
+00:286  OCDM: RBAR using PciIo
+00:289  OCDM: Setting RBAR to 0 inc 1 on 5/43          ← inc 1 = UEFI 阶段
+00:292  OCDM: RBAR control is 460, total 3 - Success
+00:295  OCDM: Old BAR DC000000 0000000C 0000007C 0000000C 0000007E 0000F001 - Success
+00:297  OCDM: RBAR 1/3 supports 0x10,   sizing 0 inc 1 results setting from 4  to 4
+00:300  OCDM: RBAR 2/3 supports 0x3FC0, sizing 0 inc 1 results setting from 13 to 6
+00:303  OCDM: RBAR 3/3 supports 0x20,   sizing 0 inc 1 results setting from 5  to 5
+00:305  OCDM: New BAR DC000000 0000000C 0000007C 0000000C 0000007E 0000F001 - Success
+00:308  OCDM: Reprogrammed BARs to original - Success
+00:311  OCDM: Setting RBAR to 0 inc 1 on 19/43
+00:314  OCDM: RBAR is unsupported by device - Not Found
+```
+
+**阶段 B（Apple 路径，`14:884`–`14:906`）**：
+
+```
+14:884  OCDM: RBAR using PciIo                          ← 第二次（阶段 B 没有 "Setting GPU BARs" 行，与源码一致）
+14:887  OCDM: Setting RBAR to 0 inc 0 on 5/43           ← inc 0 = Apple 阶段
+14:890  OCDM: RBAR control is 460, total 3 - Success
+14:893  OCDM: Old BAR DC000000 0000000C 0000007C 0000000C 0000007E 0000F001 - Success
+14:895  OCDM: RBAR 1/3 supports 0x10,   sizing 0 inc 0 results setting from 4  to 4
+14:898  OCDM: RBAR 2/3 supports 0x3FC0, sizing 0 inc 0 results setting from 6  to 6   ★
+14:901  OCDM: RBAR 3/3 supports 0x20,   sizing 0 inc 0 results setting from 5  to 5
+14:904  OCDM: Setting RBAR to 0 inc 0 on 19/43
+14:906  OCDM: RBAR is unsupported by device - Not Found
+```
+
+#### B. "同一台 GPU"确认（按 §9.4 的**主判据**，不是靠序号）
+
+| 主判据 | 阶段 A | 阶段 B | 一致？ |
+|---|---|---|---|
+| RBAR Capability 掩码全组 | `0x10` / `0x3FC0` / `0x20` | `0x10` / `0x3FC0` / `0x20` | ✅ |
+| `Old BAR` 六 dword | `DC000000 0000000C 0000007C 0000000C 0000007E 0000F001` | **完全相同** | ✅ |
+| `RBAR control is … total 3` | `460, total 3` | `460, total 3` | ✅ |
+| （辅助）序号 | `5/43`，随后 `19/43` unsupported | `5/43`，随后 `19/43` unsupported | ✅ |
+
+⇒ **两组输出确认属于同一台 RTX 4050（`01:00.0`，`\_SB.PCI0.GPP0.PEGP`）。**
+
+#### C. **结论：OpenCore 的 RBAR Control 写入确实生效（H1 成立，(a) 被证伪）**
+
+* 阶段 B 读到 **`from 6`**，而阶段 A 已经把 BAR1 设成 **index 6 = 64 MiB**
+  ⇒ **阶段 A 的缩容保持到了 Apple 阶段**。
+* ⇒ 此前 §3.3 里的二义性 **就此解决**：
+  **(a) "该 GPU 忽略/锁住尺寸写入" 被证伪**；
+  **(b) "设备在尺寸变化时保留 BAR 内容" 成立**
+  —— 这也正是 `New BAR == Old BAR` 的正确解释（**不是**"没写进去"）。
+* **阶段 B 一次写操作都没有发生**（关键）：
+  `New BAR` 计数 = **0**、`Reprogrammed` 计数 = **0**（阶段 A 各为 1）
+  —— 因为 `from 6 to 6` ⇒ `Bit == 当前 BarSize` ⇒ 源码走 `continue` ⇒ `ChangedBars` 保持 `FALSE`
+  ⇒ `if (ChangedBars)` 整块被跳过。
+  ⇒ **`from 6 to 6` 是一次"零写入"的纯读回**，**没有被本阶段自己的动作污染** —— 这是本条证据最强的地方。
+
+#### D. **跨轮次推论（本轮最重要的一条）**：**已测各轮的 macOS 都跑在 64 MiB BAR1 之下**
+
+① 逐份日志统计（`RBAR using PciIo` / `New BAR` / `Reprogrammed` 的出现次数）：
+
+| 轮次 | `UEFI.ResizeGpuBars` | 通过次数 | 阶段 A | 阶段 B | `New BAR`+`Reprogrammed` |
+|---|---|---|---|---|---|
+| Round 4 / Round 6 | `-1` | **1** | 无（`if` 不成立） | `inc 0`，`from 13 to 6` | **1 + 1** ⇒ 阶段 B **写了** |
+| **Round 7** | `0` | **2** | `inc 1`，`from 13 to 6` | `inc 0`，**`from 6 to 6`** | 阶段 A：1+1（写了）；**阶段 B：0 + 0（没写）** |
+
+⇒ 在 **R4/R6** 里，虽然阶段 A 不存在，但**阶段 B 自己把 BAR1 从 13 写成了 6**（有 `New BAR` + `Reprogrammed` 为证）
+⇒ **那些轮次的 macOS 同样是在 64 MiB 的 BAR1 下运行的**。
+⇒ **结论**：**"BAR1 太大"在 R2/R4/R5B/R6/R7 的任何一轮里都**不是**当时的条件**；
+`configure()` 的卡点在**这些轮次全部发生在 64 MiB BAR1 之下**。
+⇒ **整条 BAR 轴对本停点的嫌疑因此大幅下降**（不是"无关"，而是"已测条件下它一直是小 BAR"）。
+
+#### E. 屏幕侧（① 照片 `IMG20261013214007.jpg`，21:40:07，`EXITBS` 后约 3 分钟）
+
+最后可见两行仍为：
+```text
+[ PCI configuration begin ]
+[IOPCIConfigurator::configure()] PCI configuration PCI0
+```
+上方是 `CoreAnalyticsHub start completed` 与 5× `[addMemoryRange()] AppleVTD is not yet installed as gSystem`
+—— **与 Round 4 / Round 6 的屏幕内容逐行一致**。
+
+**按 §9.4 预登记的判据回填**：
+
+| 观察 | 结论 |
+|---|---|
+| 阶段 B **`from 6 to 6`** | ✅ **早期 64 MiB 缩容保持到了 Apple 阶段**（H1 成立） |
+| 但仍**卡在 `PCI configuration`** | ⇒ **早期 64 MiB BAR 缩容不足以**使该配置进入 Recovery；**不能排除** macOS 后续重新分配资源 |
+| GOP / 选择界面 | ✅ **本次未观察到选择界面损坏**（引导正常到达 Apple 路径并跑到 `EXITBS`，操作者未报告异常）—— 但只说明"本次未触发"，**不等于无风险** |
+
+#### F. 这对后续候选意味着什么
+
+* **候选 B（`Booter.Quirks.ResizeAppleGpuBars: 0 → -1`）现在才真正有信息量**：
+  它会让 **macOS 第一次看到固件的 8 GiB BAR1**（因为阶段 B 不会再把它写成 6）
+  —— 而 8 GiB 这个条件**在已测的任何一轮里都没有出现过**。
+  若停点仍相同 ⇒ 可以**干净地**排除"BAR1 尺寸"这一整类假设；
+  若停点变化 ⇒ BAR 尺寸确实参与其中。
+  **风险**：`ResizeAppleGpuBars` 在 **Booter 阶段（选择界面之后）** 生效 ⇒ **没有选择界面被破坏的风险**（比本轮更安全）。
+* **候选 C** 仍不可行（需新增 SSDT / 改 `_CRS`，用户禁止）。
+* **候选 D** 仍是低信息量。
+* ⇒ 下一轮的首选自然落在 **候选 B**（等用户批准）。
+
+**状态：Round 7 已引导并完成判读；卡上仍为 Round 7（`58E78A12…`）。**
+**未经批准不执行 Round 8**；**不**修改 BIOS / ReBAR / `MmioWhitelist` / Windows EFI / BCD / 分区，
+**不**换 `OpenCore.efi`、**不**加驱动、**不**加 SSDT。
