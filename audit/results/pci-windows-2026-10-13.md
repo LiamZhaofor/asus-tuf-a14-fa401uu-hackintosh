@@ -129,10 +129,10 @@ Sources: `pnputil-all.xml` + `plan.json`
   * `00:01.1` only_in_cfgmgr=[['0x7C00000000', '0x7E01FFFFFF']] only_in_pnputil=[]
   * `00:03.1` only_in_cfgmgr=[['0x6C00000000', '0x7BFFFFFFFF']] only_in_pnputil=[]
   * `01:00.0` only_in_cfgmgr=[['0x7C00000000', '0x7DFFFFFFFF']] only_in_pnputil=[]
-* hypothesis: pnputil /resources omits every CmResourceTypeMemoryLarge descriptor, i.e. every window whose length does not fit 32 bits (>= 4 GiB)
+* hypothesis: SCOPE-LIMITED: on this machine the ONLY windows present in the CfgMgr32 records but absent from pnputil /resources are the three MemoryLarge (>= 4 GiB) ones. The wider rule 'pnputil omits every MemoryLarge descriptor' is a HYPOTHESIS consistent with those three observations, NOT a verified property of the API - it is not generalised anywhere.
   * windows only in cfgmgr: 3 ; min length: 8589934592 B ; all >= 4 GiB: True
   * windows only in pnputil: 0
-  * verdict: **consistent with the statement**
+  * verdict: **the three observations are consistent with the hypothesis**
 
 ## 4. Checks on the MERGED window set
 * buses observed: 0x00, 0x01, 0x02, 0x03, 0x04, 0x65, 0x66, 0x67 ; above the legal 0xFF: none
@@ -148,9 +148,10 @@ Sources: `pnputil-all.xml` + `plan.json`
 ## 6. What Windows cannot answer (registered, not guessed)
 * **PCI-to-PCI bridge Primary / Secondary / Subordinate Bus Number registers (config space 0x18/0x19/0x1A)** -> available=False
   * attempted: DEVPKEY_Device_DeviceNumber / DEVPKEY_Device_FunctionNumber: DO NOT EXIST on this build - the full per-device property inventory contains DEVPKEY_Device_BusNumber and DEVPKEY_Device_Address only (see prop_keys).
-  * attempted: CfgMgr32 CM_Get_First_Log_Conf(ALLOC_LOG_CONF) then CM_Get_Next_Res_Des: CM_Get_First_Res_Des is NOT exported by cfgmgr32.dll on this Windows build (string-scanned every DLL in System32: 0 hits), and calling CM_Get_Next_Res_Des with a NULL current handle returns CR_INVALID_FLAG (4).
+  * attempted: CfgMgr32 CM_Get_First_Log_Conf(ALLOC_LOG_CONF / BASIC_LOG_CONF / BOOT_LOG_CONF) opens successfully here, but CM_Get_Next_Res_Des never returns CR_SUCCESS for these devices: the documented first-descriptor form (LOG_CONF handle passed as rdResDes) returns CR_INVALID_FLAG (4) for every ForType 0x00..0x41, with both a 32-bit ULONG handle declaration and a zero-initialised pointer-sized one, and NULL also returns 4. So that particular CALL SHAPE was not usable in this session. (CM_Get_First_Res_Des is not exported by cfgmgr32.dll here, but that is NOT offered as the reason the values are unavailable - see below.)
+  * attempted: The registry logical-configuration values WERE read and fully decoded (audit/pci-logconf-audit.py): BootConfig is a complete REG_RESOURCE_LIST and BasicConfigVector a complete REG_RESOURCE_REQUIREMENTS_LIST, each parsing to its declared size with zero residual bytes. Neither contains ANY descriptor of type CmResourceTypeBusNumber - checked on all 25 PCI functions that have a LogConf key (0 found). So Windows does not record a bus-number resource for these bridges at all, regardless of which call is used.
   * proxy: primary = the bridge's own DEVPKEY_Device_BusNumber (reported); secondary and subordinate are DERIVED from the buses of the functions Windows enumerated underneath the bridge.
-  * consequence: a derived range cannot distinguish 'bridge claims a wider bus range than it uses' from 'bridge claims exactly what it uses'; a childless bridge yields unknown, not empty. The question 'do two bridges claim overlapping bus ranges?' CANNOT be answered from Windows data.
+  * consequence: a derived range cannot distinguish 'bridge claims a wider bus range than it uses' from 'bridge claims exactly what it uses'; a childless bridge yields unknown, not empty. The question 'do two bridges claim overlapping bus ranges?' cannot be answered from Windows data - and the real reason is that no Windows source carries the value, not a missing API name.
 * **bridge Memory Base/Limit and Prefetchable Memory Base/Limit registers** -> available=proxy only
   * attempted: raw configuration space is not exposed by any Windows user-mode API.
   * proxy: the CfgMgr32 ALLOC_LOG_CONF window records (base, end, flags) which pci.sys built from those registers, incl. CM_RESOURCE_MEMORY_PREFETCHABLE (0x04).

@@ -2093,7 +2093,8 @@
   }
  ],
  "pci_root_bus": {
-  "instance_id": "ACPI\\PNP0A08",
+  "acpi_id": "PNP0A08",
+  "instance_id": null,
   "description": "PCI Express 根复合体",
   "mem": [
    [
@@ -2169,13 +2170,13 @@
   }
  ],
  "memory_large_hypothesis": {
-  "statement": "pnputil /resources omits every CmResourceTypeMemoryLarge descriptor, i.e. every window whose length does not fit 32 bits (>= 4 GiB)",
+  "statement": "SCOPE-LIMITED: on this machine the ONLY windows present in the CfgMgr32 records but absent from pnputil /resources are the three MemoryLarge (>= 4 GiB) ones. The wider rule 'pnputil omits every MemoryLarge descriptor' is a HYPOTHESIS consistent with those three observations, NOT a verified property of the API - it is not generalised anywhere.",
   "threshold_bytes": 4294967296,
   "windows_only_in_cfgmgr": 3,
   "all_only_in_cfgmgr_are_over_threshold": true,
   "min_length_only_in_cfgmgr": 8589934592,
   "windows_only_in_pnputil": 0,
-  "verdict": "consistent with the statement"
+  "verdict": "the three observations are consistent with the hypothesis"
  },
  "containment_violations": [],
  "windows_outside_declared": [],
@@ -2452,10 +2453,11 @@
    "available": false,
    "attempted": [
     "DEVPKEY_Device_DeviceNumber / DEVPKEY_Device_FunctionNumber: DO NOT EXIST on this build - the full per-device property inventory contains DEVPKEY_Device_BusNumber and DEVPKEY_Device_Address only (see prop_keys).",
-    "CfgMgr32 CM_Get_First_Log_Conf(ALLOC_LOG_CONF) then CM_Get_Next_Res_Des: CM_Get_First_Res_Des is NOT exported by cfgmgr32.dll on this Windows build (string-scanned every DLL in System32: 0 hits), and calling CM_Get_Next_Res_Des with a NULL current handle returns CR_INVALID_FLAG (4)."
+    "CfgMgr32 CM_Get_First_Log_Conf(ALLOC_LOG_CONF / BASIC_LOG_CONF / BOOT_LOG_CONF) opens successfully here, but CM_Get_Next_Res_Des never returns CR_SUCCESS for these devices: the documented first-descriptor form (LOG_CONF handle passed as rdResDes) returns CR_INVALID_FLAG (4) for every ForType 0x00..0x41, with both a 32-bit ULONG handle declaration and a zero-initialised pointer-sized one, and NULL also returns 4. So that particular CALL SHAPE was not usable in this session. (CM_Get_First_Res_Des is not exported by cfgmgr32.dll here, but that is NOT offered as the reason the values are unavailable - see below.)",
+    "The registry logical-configuration values WERE read and fully decoded (audit/pci-logconf-audit.py): BootConfig is a complete REG_RESOURCE_LIST and BasicConfigVector a complete REG_RESOURCE_REQUIREMENTS_LIST, each parsing to its declared size with zero residual bytes. Neither contains ANY descriptor of type CmResourceTypeBusNumber - checked on all 25 PCI functions that have a LogConf key (0 found). So Windows does not record a bus-number resource for these bridges at all, regardless of which call is used."
    ],
    "proxy": "primary = the bridge's own DEVPKEY_Device_BusNumber (reported); secondary and subordinate are DERIVED from the buses of the functions Windows enumerated underneath the bridge.",
-   "consequence": "a derived range cannot distinguish 'bridge claims a wider bus range than it uses' from 'bridge claims exactly what it uses'; a childless bridge yields unknown, not empty. The question 'do two bridges claim overlapping bus ranges?' CANNOT be answered from Windows data."
+   "consequence": "a derived range cannot distinguish 'bridge claims a wider bus range than it uses' from 'bridge claims exactly what it uses'; a childless bridge yields unknown, not empty. The question 'do two bridges claim overlapping bus ranges?' cannot be answered from Windows data - and the real reason is that no Windows source carries the value, not a missing API name."
   },
   {
    "field": "bridge Memory Base/Limit and Prefetchable Memory Base/Limit registers",
@@ -2614,32 +2616,24 @@
   "DEVPKEY_PciDevice_Uncorrectable_Error_Severity": 26,
   "DEVPKEY_PciDevice_UsbComponentRelation": 26,
   "DEVPKEY_PciDevice_VirtualChannelControlRegisters": 1,
-  "{3464f7a4-2444-40b1-980a-e0903cb6d912}[10]": 42,
-  "{5d274563-08ec-4bf0-ad31-d0a6f6e0b2d2}[2]": 1,
-  "{5df7e321-1c1b-4ce2-b4fa-55f4a5bc2cb6}[3]": 1,
-  "{5df7e321-1c1b-4ce2-b4fa-55f4a5bc2cb6}[4]": 1,
-  "{5df7e321-1c1b-4ce2-b4fa-55f4a5bc2cb6}[6]": 1,
-  "{60b193cb-5276-4d0f-96fc-f173abad3ec6}[2]": 3,
-  "{60b193cb-5276-4d0f-96fc-f173abad3ec6}[3]": 3,
-  "{80497100-8c73-48b9-aad9-ce387e19c56e}[6]": 42,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[10]": 42,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[15]": 42,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[18]": 14,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[22]": 1,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[25]": 39,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[26]": 39,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[3]": 42,
-  "{83da6326-97a6-4088-9453-a1923f573b29}[4]": 3,
-  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[16]": 10,
-  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[20]": 3,
-  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[23]": 1,
-  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[24]": 1,
-  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[26]": 42,
-  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[31]": 1,
-  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[33]": 2,
-  "{f06d20bc-24e5-4773-93d7-8b1514fbc9a5}[0]": 3,
-  "{f06d20bc-24e5-4773-93d7-8b1514fbc9a5}[1]": 3,
-  "{f0e20f09-d97a-49a9-8046-bb6e22e6bb2e}[2]": 24
+  "{device-property-guid}[0]": 3,
+  "{device-property-guid}[10]": 84,
+  "{device-property-guid}[15]": 42,
+  "{device-property-guid}[16]": 10,
+  "{device-property-guid}[18]": 14,
+  "{device-property-guid}[1]": 3,
+  "{device-property-guid}[20]": 3,
+  "{device-property-guid}[22]": 1,
+  "{device-property-guid}[23]": 1,
+  "{device-property-guid}[24]": 1,
+  "{device-property-guid}[25]": 39,
+  "{device-property-guid}[26]": 81,
+  "{device-property-guid}[2]": 28,
+  "{device-property-guid}[31]": 1,
+  "{device-property-guid}[33]": 2,
+  "{device-property-guid}[3]": 46,
+  "{device-property-guid}[4]": 4,
+  "{device-property-guid}[6]": 43
  },
  "device_number_property_present": false,
  "function_number_property_present": false,

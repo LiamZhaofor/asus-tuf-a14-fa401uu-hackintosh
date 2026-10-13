@@ -1,0 +1,5110 @@
+{
+ "source": "HKLM\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\<dev>\\<inst>\\LogConf",
+ "values": {
+  "BootConfig": "REG_RESOURCE_LIST (firmware hand-over)",
+  "BasicConfigVector": "REG_RESOURCE_REQUIREMENTS_LIST (range + required length)"
+ },
+ "memory_large_scale": 256,
+ "memory_large_scale_note": "Type 7 length field = length/256. Proof in the module docstring; control case: the RTX 4050's Type 3 BAR3 and Type 7 BAR1 both read 0x2000000 while really being 32 MiB and 8 GiB respectively.",
+ "device_count": 25,
+ "busnumber_descriptors_found": 0,
+ "busnumber_descriptors": [],
+ "devices": [
+  {
+   "bdf": "00:01.1",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP0)",
+   "boot_config": {
+    "bytes_used": 80,
+    "bytes_total": 80,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 3,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3690987520,
+        "length": 17825792,
+        "raw_length_field": 17825792,
+        "scaled": false,
+        "end": 3708813311
+       },
+       {
+        "type": 7,
+        "type_name": "MemoryLarge",
+        "flags": 580,
+        "flags_str": "PREFETCHABLE|ALIGN32|FLAG200",
+        "start": 532575944704,
+        "length": 8623489024,
+        "raw_length_field": 33685504,
+        "scaled": true,
+        "end": 541199433727
+       },
+       {
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "start": 61440,
+        "length": 4096,
+        "raw_length_field": 4096,
+        "scaled": false,
+        "end": 65535
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 360,
+    "bytes_total": 360,
+    "self_consistent": true,
+    "list_size": 360,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 33,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 10,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3690987520,
+        "range_max": 3708813311,
+        "required_length": 17825792,
+        "raw_length_field": 17825792,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 17825792,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 7,
+        "type_name": "MemoryLarge",
+        "flags": 580,
+        "flags_str": "PREFETCHABLE|ALIGN32|FLAG200",
+        "range_min": 532575944704,
+        "range_max": 541199433727,
+        "required_length": 8623489024,
+        "raw_length_field": 33685504,
+        "scaled": true,
+        "alignment": 1,
+        "range_span": 8623489024,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 61440,
+        "range_max": 65535,
+        "required_length": 4096,
+        "raw_length_field": 4096,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 4096,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDC000000",
+     "0xDD0FFFFF",
+     "memory"
+    ],
+    [
+     "0x7C00000000",
+     "0x7E01FFFFFF",
+     "memory_large"
+    ]
+   ]
+  },
+  {
+   "bdf": "00:02.1",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP5)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3723493376,
+        "length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "end": 3724541951
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 296,
+    "bytes_total": 296,
+    "self_consistent": true,
+    "list_size": 296,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 34,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 8,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3723493376,
+        "range_max": 3724541951,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 1048576,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDF00000",
+     "0xDDFFFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "00:02.2",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP6)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3719299072,
+        "length": 2097152,
+        "raw_length_field": 2097152,
+        "scaled": false,
+        "end": 3721396223
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 296,
+    "bytes_total": 296,
+    "self_consistent": true,
+    "list_size": 296,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 66,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 8,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3719299072,
+        "range_max": 3721396223,
+        "required_length": 2097152,
+        "raw_length_field": 2097152,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 2097152,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDB00000",
+     "0xDDCFFFFF",
+     "memory"
+    ],
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "00:02.4",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP8)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3722444800,
+        "length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "end": 3723493375
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 296,
+    "bytes_total": 296,
+    "self_consistent": true,
+    "list_size": 296,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 130,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 8,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3722444800,
+        "range_max": 3723493375,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 1048576,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDE00000",
+     "0xDDEFFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "00:03.1",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP11)",
+   "boot_config": {
+    "bytes_used": 80,
+    "bytes_total": 80,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 3,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3288334336,
+        "length": 402653184,
+        "raw_length_field": 402653184,
+        "scaled": false,
+        "end": 3690987519
+       },
+       {
+        "type": 7,
+        "type_name": "MemoryLarge",
+        "flags": 580,
+        "flags_str": "PREFETCHABLE|ALIGN32|FLAG200",
+        "start": 463856467968,
+        "length": 68719476736,
+        "raw_length_field": 268435456,
+        "scaled": true,
+        "end": 532575944703
+       },
+       {
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "start": 40960,
+        "length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "end": 57343
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 360,
+    "bytes_total": 360,
+    "self_consistent": true,
+    "list_size": 360,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 35,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 10,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3288334336,
+        "range_max": 3690987519,
+        "required_length": 402653184,
+        "raw_length_field": 402653184,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 402653184,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 7,
+        "type_name": "MemoryLarge",
+        "flags": 580,
+        "flags_str": "PREFETCHABLE|ALIGN32|FLAG200",
+        "range_min": 463856467968,
+        "range_max": 532575944703,
+        "required_length": 68719476736,
+        "raw_length_field": 268435456,
+        "scaled": true,
+        "alignment": 1,
+        "range_span": 68719476736,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 40960,
+        "range_max": 57343,
+        "required_length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 16384,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xC4000000",
+     "0xDBFFFFFF",
+     "memory"
+    ],
+    [
+     "0x6C00000000",
+     "0x7BFFFFFFFF",
+     "memory_large"
+    ]
+   ]
+  },
+  {
+   "bdf": "00:08.1",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)",
+   "boot_config": {
+    "bytes_used": 80,
+    "bytes_total": 80,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 3,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3709861888,
+        "length": 6291456,
+        "raw_length_field": 6291456,
+        "scaled": false,
+        "end": 3716153343
+       },
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "start": 541434314752,
+        "length": 276824064,
+        "raw_length_field": 276824064,
+        "scaled": false,
+        "end": 541711138815
+       },
+       {
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "start": 57344,
+        "length": 4096,
+        "raw_length_field": 4096,
+        "scaled": false,
+        "end": 61439
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 392,
+    "bytes_total": 392,
+    "self_consistent": true,
+    "list_size": 392,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 40,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 11,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3709861888,
+        "range_max": 3716153343,
+        "required_length": 6291456,
+        "raw_length_field": 6291456,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 6291456,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 541434314752,
+        "range_max": 541711138815,
+        "required_length": 276824064,
+        "raw_length_field": 276824064,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 276824064,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 57344,
+        "range_max": 61439,
+        "required_length": 4096,
+        "raw_length_field": 4096,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 4096,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 4,
+        "flags_str": "PREFETCHABLE",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD200000",
+     "0xDD7FFFFF",
+     "memory"
+    ],
+    [
+     "0x7E10000000",
+     "0x7E207FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "00:08.2",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP18)",
+   "boot_config": {
+    "bytes_used": 60,
+    "bytes_total": 60,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 2,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3721396224,
+        "length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "end": 3722444799
+       },
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "start": 541712187392,
+        "length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "end": 541713235967
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 360,
+    "bytes_total": 360,
+    "self_consistent": true,
+    "list_size": 360,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 72,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 10,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3721396224,
+        "range_max": 3722444799,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 1048576,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 541712187392,
+        "range_max": 541713235967,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 1048576,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 4,
+        "flags_str": "PREFETCHABLE",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDD00000",
+     "0xDDDFFFFF",
+     "memory"
+    ],
+    [
+     "0x7E20900000",
+     "0x7E209FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "00:08.3",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 0,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "start": 3716153344,
+        "length": 3145728,
+        "raw_length_field": 3145728,
+        "scaled": false,
+        "end": 3719299071
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 328,
+    "bytes_total": 328,
+    "self_consistent": true,
+    "list_size": 328,
+    "interface_type": 5,
+    "bus_number": 0,
+    "slot_number": 104,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 9,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 3716153344,
+        "range_max": 3719299071,
+        "required_length": 3145728,
+        "raw_length_field": 3145728,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 3145728,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 64,
+        "flags_str": "ALIGN32",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         7,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 68,
+        "flags_str": "PREFETCHABLE|ALIGN32",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         8,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 161,
+        "flags_str": "READABLE|CACHEABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 0,
+        "raw_length_field": 0,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         9,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 4,
+        "flags_str": "PREFETCHABLE",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD800000",
+     "0xDDAFFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "01:00.0",
+   "desc": "NVIDIA GeForce RTX 4050 Laptop GPU",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP0)#ACPI(PEGP)",
+   "boot_config": {
+    "bytes_used": 100,
+    "bytes_total": 100,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 1,
+      "version": 1,
+      "revision": 1,
+      "count": 4,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3690987520,
+        "length": 16777216,
+        "raw_length_field": 16777216,
+        "scaled": false,
+        "end": 3707764735
+       },
+       {
+        "type": 7,
+        "type_name": "MemoryLarge",
+        "flags": 644,
+        "flags_str": "PREFETCHABLE|ALIGN64|FLAG200",
+        "start": 532575944704,
+        "length": 8589934592,
+        "raw_length_field": 33554432,
+        "scaled": true,
+        "end": 541165879295
+       },
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "start": 541165879296,
+        "length": 33554432,
+        "raw_length_field": 33554432,
+        "scaled": false,
+        "end": 541199433727
+       },
+       {
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 305,
+        "flags_str": "READABLE|ALIAS|CACHEABLE",
+        "start": 61440,
+        "length": 128,
+        "raw_length_field": 128,
+        "scaled": false,
+        "end": 61567
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 488,
+    "bytes_total": 488,
+    "self_consistent": true,
+    "list_size": 488,
+    "interface_type": 5,
+    "bus_number": 1,
+    "slot_number": 0,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 14,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3690987520,
+        "range_max": 3707764735,
+        "required_length": 16777216,
+        "raw_length_field": 16777216,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 16777216,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 16777216,
+        "raw_length_field": 16777216,
+        "scaled": false,
+        "alignment": 16777216,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 7,
+        "type_name": "MemoryLarge",
+        "flags": 644,
+        "flags_str": "PREFETCHABLE|ALIGN64|FLAG200",
+        "range_min": 532575944704,
+        "range_max": 541165879295,
+        "required_length": 8589934592,
+        "raw_length_field": 33554432,
+        "scaled": true,
+        "alignment": 1,
+        "range_span": 8589934592,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 7,
+        "type_name": "MemoryLarge",
+        "flags": 644,
+        "flags_str": "PREFETCHABLE|ALIGN64|FLAG200",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 8589934592,
+        "raw_length_field": 33554432,
+        "scaled": true,
+        "alignment": 33554432,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         1,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 541165879296,
+        "range_max": 541199433727,
+        "required_length": 33554432,
+        "raw_length_field": 33554432,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 33554432,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 33554432,
+        "raw_length_field": 33554432,
+        "scaled": false,
+        "alignment": 33554432,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         3,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 305,
+        "flags_str": "READABLE|ALIAS|CACHEABLE",
+        "range_min": 61440,
+        "range_max": 61567,
+        "required_length": 128,
+        "raw_length_field": 128,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 128,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 305,
+        "flags_str": "READABLE|ALIAS|CACHEABLE",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 128,
+        "raw_length_field": 128,
+        "scaled": false,
+        "alignment": 128,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         5,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 3,
+        "flags_str": "READABLE|WRITABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDC000000",
+     "0xDCFFFFFF",
+     "memory"
+    ],
+    [
+     "0x7C00000000",
+     "0x7DFFFFFFFF",
+     "memory_large"
+    ],
+    [
+     "0x7E00000000",
+     "0x7E01FFFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "01:00.1",
+   "desc": "High Definition Audio 控制器",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP0)#ACPI(NHDA)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 136,
+    "bytes_total": 136,
+    "self_consistent": true,
+    "list_size": 136,
+    "interface_type": 5,
+    "bus_number": 1,
+    "slot_number": 32,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 3,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "alignment": 16384,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD0FC000",
+     "0xDD0FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "02:00.0",
+   "desc": "Realtek PCIE CardReader",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP5)#ACPI(DEV0)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 168,
+    "bytes_total": 168,
+    "self_consistent": true,
+    "list_size": 168,
+    "interface_type": 5,
+    "bus_number": 2,
+    "slot_number": 0,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 4,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 4096,
+        "raw_length_field": 4096,
+        "scaled": false,
+        "alignment": 4096,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         1,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 3,
+        "flags_str": "READABLE|WRITABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDFFF000",
+     "0xDDFFFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "03:00.0",
+   "desc": "MediaTek Wi-Fi 6E MT7922 (RZ616) 160MHz Wireless LAN Card",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP6)#ACPI(WLAN)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 232,
+    "bytes_total": 232,
+    "self_consistent": true,
+    "list_size": 232,
+    "interface_type": 5,
+    "bus_number": 3,
+    "slot_number": 0,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 6,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 32768,
+        "raw_length_field": 32768,
+        "scaled": false,
+        "alignment": 32768,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 3,
+        "flags_str": "READABLE|WRITABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF",
+     "memory"
+    ],
+    [
+     "0xDDCF8000",
+     "0xDDCFFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "04:00.0",
+   "desc": "标准 NVM Express 控制器",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP8)#ACPI(NVME)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 4,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3722444800,
+        "length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "end": 3722461183
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 2384,
+    "bytes_total": 2416,
+    "self_consistent": false,
+    "list_size": 2416,
+    "interface_type": 5,
+    "bus_number": 4,
+    "slot_number": 0,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 2,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 68,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3722444800,
+        "range_max": 3722461183,
+        "required_length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 16384,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "alignment": 16384,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     },
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 5,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3722444800,
+        "range_max": 3722461183,
+        "required_length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 16384,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "alignment": 16384,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDE00000",
+     "0xDDE03FFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "65:00.0",
+   "desc": "AMD Radeon 780M Graphics",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(VGA_)",
+   "boot_config": {
+    "bytes_used": 80,
+    "bytes_total": 80,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 101,
+      "version": 1,
+      "revision": 1,
+      "count": 3,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "start": 541434314752,
+        "length": 268435456,
+        "raw_length_field": 268435456,
+        "scaled": false,
+        "end": 541702750207
+       },
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "start": 3709861888,
+        "length": 2097152,
+        "raw_length_field": 2097152,
+        "scaled": false,
+        "end": 3711959039
+       },
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3715104768,
+        "length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "end": 3715629055
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 944,
+    "bytes_total": 976,
+    "self_consistent": false,
+    "list_size": 976,
+    "interface_type": 5,
+    "bus_number": 101,
+    "slot_number": 0,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 2,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 15,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 541434314752,
+        "range_max": 541702750207,
+        "required_length": 268435456,
+        "raw_length_field": 268435456,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 268435456,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 268435456,
+        "raw_length_field": 268435456,
+        "scaled": false,
+        "alignment": 268435456,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 3709861888,
+        "range_max": 3711959039,
+        "required_length": 2097152,
+        "raw_length_field": 2097152,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 2097152,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 2097152,
+        "raw_length_field": 2097152,
+        "scaled": false,
+        "alignment": 2097152,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 305,
+        "flags_str": "READABLE|ALIAS|CACHEABLE",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 256,
+        "raw_length_field": 256,
+        "scaled": false,
+        "alignment": 256,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         4,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3715104768,
+        "range_max": 3715629055,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 524288,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 524288,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         5,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     },
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 13,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 541434314752,
+        "range_max": 541702750207,
+        "required_length": 268435456,
+        "raw_length_field": 268435456,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 268435456,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 268435456,
+        "raw_length_field": 268435456,
+        "scaled": false,
+        "alignment": 268435456,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 3709861888,
+        "range_max": 3711959039,
+        "required_length": 2097152,
+        "raw_length_field": 2097152,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 2097152,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 2097152,
+        "raw_length_field": 2097152,
+        "scaled": false,
+        "alignment": 2097152,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 1,
+        "type_name": "Port/IO",
+        "flags": 305,
+        "flags_str": "READABLE|ALIAS|CACHEABLE",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 256,
+        "raw_length_field": 256,
+        "scaled": false,
+        "alignment": 256,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         4,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3715104768,
+        "range_max": 3715629055,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 524288,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 524288,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         5,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0x7E10000000",
+     "0x7E1FFFFFFF",
+     "memory"
+    ],
+    [
+     "0xDD200000",
+     "0xDD3FFFFF",
+     "memory"
+    ],
+    [
+     "0xDD700000",
+     "0xDD77FFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "65:00.1",
+   "desc": "High Definition Audio Bus",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(HDAU)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 136,
+    "bytes_total": 136,
+    "self_consistent": true,
+    "list_size": 136,
+    "interface_type": 5,
+    "bus_number": 101,
+    "slot_number": 32,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 3,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 16384,
+        "raw_length_field": 16384,
+        "scaled": false,
+        "alignment": 16384,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD7F8000",
+     "0xDD7FBFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "65:00.2",
+   "desc": "AMD PSP 11.0 Device",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#PCI(0002)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 432,
+    "bytes_total": 464,
+    "self_consistent": false,
+    "list_size": 464,
+    "interface_type": 5,
+    "bus_number": 101,
+    "slot_number": 64,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 2,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 6,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 8192,
+        "raw_length_field": 8192,
+        "scaled": false,
+        "alignment": 8192,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         5,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     },
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 6,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 8192,
+        "raw_length_field": 8192,
+        "scaled": false,
+        "alignment": 8192,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         5,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD600000",
+     "0xDD6FFFFF",
+     "memory"
+    ],
+    [
+     "0xDD7FE000",
+     "0xDD7FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "65:00.3",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(XHC0)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 101,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3713007616,
+        "length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "end": 3714056191
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 200,
+    "bytes_total": 200,
+    "self_consistent": true,
+    "list_size": 200,
+    "interface_type": 5,
+    "bus_number": 101,
+    "slot_number": 96,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 5,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3713007616,
+        "range_max": 3714056191,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 1048576,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD500000",
+     "0xDD5FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "65:00.4",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(XHC1)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 168,
+    "bytes_total": 168,
+    "self_consistent": true,
+    "list_size": 168,
+    "interface_type": 5,
+    "bus_number": 101,
+    "slot_number": 128,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 4,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 3,
+        "flags_str": "READABLE|WRITABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD400000",
+     "0xDD4FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "65:00.5",
+   "desc": "AMD Audio CoProcessor",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(ACP_)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 200,
+    "bytes_total": 200,
+    "self_consistent": true,
+    "list_size": 200,
+    "interface_type": 5,
+    "bus_number": 101,
+    "slot_number": 160,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 5,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 262144,
+        "raw_length_field": 262144,
+        "scaled": false,
+        "alignment": 262144,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 8388608,
+        "raw_length_field": 8388608,
+        "scaled": false,
+        "alignment": 8388608,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD780000",
+     "0xDD7BFFFF",
+     "memory"
+    ],
+    [
+     "0x7E20000000",
+     "0x7E207FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "65:00.6",
+   "desc": "High Definition Audio 控制器",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(AZAL)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 101,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3715891200,
+        "length": 32768,
+        "raw_length_field": 32768,
+        "scaled": false,
+        "end": 3715923967
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 168,
+    "bytes_total": 168,
+    "self_consistent": true,
+    "list_size": 168,
+    "interface_type": 5,
+    "bus_number": 101,
+    "slot_number": 192,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 4,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3715891200,
+        "range_max": 3715923967,
+        "required_length": 32768,
+        "raw_length_field": 32768,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 32768,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 32768,
+        "raw_length_field": 32768,
+        "scaled": false,
+        "alignment": 32768,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD7C0000",
+     "0xDD7C7FFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "66:00.0",
+   "desc": "AMD PCI",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP18)#PCI(0000)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 104,
+    "bytes_total": 104,
+    "self_consistent": true,
+    "list_size": 104,
+    "interface_type": 5,
+    "bus_number": 102,
+    "slot_number": 0,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 2,
+      "entries": [
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 3,
+        "flags_str": "READABLE|WRITABLE",
+        "min_vector": 4294967291,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 3,
+        "flags_str": "READABLE|WRITABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": []
+  },
+  {
+   "bdf": "66:00.1",
+   "desc": "NPU Compute Accelerator Device",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP18)#ACPI(NPU_)",
+   "boot_config": null,
+   "requirements": {
+    "bytes_used": 1136,
+    "bytes_total": 1168,
+    "self_consistent": false,
+    "list_size": 1168,
+    "interface_type": 5,
+    "bus_number": 102,
+    "slot_number": 32,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 2,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 24,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 524288,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 8192,
+        "raw_length_field": 8192,
+        "scaled": false,
+        "alignment": 8192,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         1,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 262144,
+        "raw_length_field": 262144,
+        "scaled": false,
+        "alignment": 262144,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 262144,
+        "raw_length_field": 262144,
+        "scaled": false,
+        "alignment": 262144,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         4,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     },
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 10,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 524288,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 8192,
+        "raw_length_field": 8192,
+        "scaled": false,
+        "alignment": 8192,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         1,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 132,
+        "flags_str": "PREFETCHABLE|ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 262144,
+        "raw_length_field": 262144,
+        "scaled": false,
+        "alignment": 262144,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         2,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 4294967295,
+        "required_length": 262144,
+        "raw_length_field": 262144,
+        "scaled": false,
+        "alignment": 262144,
+        "range_span": 4294967296,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         4,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDD80000",
+     "0xDDDFFFFF",
+     "memory"
+    ],
+    [
+     "0xDDD3E000",
+     "0xDDD3FFFF",
+     "memory"
+    ],
+    [
+     "0x7E209C0000",
+     "0x7E209FFFFF",
+     "memory"
+    ],
+    [
+     "0xDDD40000",
+     "0xDDD7FFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "67:00.3",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)#ACPI(XHC3)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 103,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3717201920,
+        "length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "end": 3718250495
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 200,
+    "bytes_total": 200,
+    "self_consistent": true,
+    "list_size": 200,
+    "interface_type": 5,
+    "bus_number": 103,
+    "slot_number": 96,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 5,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3717201920,
+        "range_max": 3718250495,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 1048576,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD900000",
+     "0xDD9FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "67:00.4",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)#ACPI(XHC4)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 103,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3716153344,
+        "length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "end": 3717201919
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 200,
+    "bytes_total": 200,
+    "self_consistent": true,
+    "list_size": 200,
+    "interface_type": 5,
+    "bus_number": 103,
+    "slot_number": 128,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 1,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 5,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3716153344,
+        "range_max": 3717201919,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 1048576,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 1048576,
+        "raw_length_field": 1048576,
+        "scaled": false,
+        "alignment": 1048576,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDD800000",
+     "0xDD8FFFFF",
+     "memory"
+    ]
+   ]
+  },
+  {
+   "bdf": "67:00.5",
+   "desc": "USB4(TM) 主机路由器 (Microsoft)",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)#ACPI(NHI0)",
+   "boot_config": {
+    "bytes_used": 40,
+    "bytes_total": 40,
+    "self_consistent": true,
+    "fulls": [
+     {
+      "interface_type": 5,
+      "bus_number": 103,
+      "version": 1,
+      "revision": 1,
+      "count": 1,
+      "entries": [
+       {
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "start": 3718250496,
+        "length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "end": 3718774783
+       }
+      ]
+     }
+    ]
+   },
+   "requirements": {
+    "bytes_used": 816,
+    "bytes_total": 848,
+    "self_consistent": false,
+    "list_size": 848,
+    "interface_type": 5,
+    "bus_number": 103,
+    "slot_number": 160,
+    "reserved": [
+     0,
+     0,
+     0
+    ],
+    "alternative_lists": 2,
+    "lists": [
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 19,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3718250496,
+        "range_max": 3718774783,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 524288,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 524288,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 0,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       }
+      ]
+     },
+     {
+      "version": 1,
+      "revision": 1,
+      "count": 5,
+      "entries": [
+       {
+        "option": 1,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 3718250496,
+        "range_max": 3718774783,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 1,
+        "range_span": 524288,
+        "free_placement": false
+       },
+       {
+        "option": 8,
+        "type": 3,
+        "type_name": "Memory",
+        "flags": 128,
+        "flags_str": "ALIGN64",
+        "range_min": 0,
+        "range_max": 18446744073709551615,
+        "required_length": 524288,
+        "raw_length_field": 524288,
+        "scaled": false,
+        "alignment": 524288,
+        "range_span": 18446744073709551616,
+        "free_placement": true
+       },
+       {
+        "option": 0,
+        "type": 129,
+        "type_name": "DevicePrivate",
+        "flags": 0,
+        "flags_str": "-",
+        "private_data": [
+         1,
+         0,
+         0
+        ]
+       },
+       {
+        "option": 1,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 7,
+        "flags_str": "READABLE|WRITABLE|PREFETCHABLE",
+        "min_vector": 4294967294,
+        "max_vector": 4294967294
+       },
+       {
+        "option": 8,
+        "type": 2,
+        "type_name": "Interrupt",
+        "flags": 0,
+        "flags_str": "-",
+        "min_vector": 0,
+        "max_vector": 4294967295
+       }
+      ]
+     }
+    ]
+   },
+   "plan_windows": [
+    [
+     "0xDDA00000",
+     "0xDDA7FFFF",
+     "memory"
+    ]
+   ]
+  }
+ ]
+}

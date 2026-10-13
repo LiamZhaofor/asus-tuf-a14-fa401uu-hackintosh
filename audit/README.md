@@ -7,8 +7,12 @@
 | 文件 | 说明 |
 |---|---|
 | `pci-windows-audit.py` | Round 8 的 Windows 侧只读审计。输入是 Windows **自己写出来**的 PnP 转储 + `1401/plan.json`，输出设备表、桥表、两个数据源的差异、包含性/越界/重叠检查、**登记缺口**。不打开设备、不发 IOCTL、不写任何 PCI 配置寄存器、不需要管理员 |
+| `dump-logconf.ps1` | 只读枚举 `HKLM\SYSTEM\CurrentControlSet\Enum\PCI\<dev>\<inst>\LogConf` 的 `BootConfig` / `BasicConfigVector` **原始字节**（`RegOpenKeyEx(KEY_READ)` + `RegQueryValueEx`）。这两种类型 `.NET` 的 `RegistryValueKind` **取不到**（返回 `Unknown`/`null`），所以必须读原始字节 |
+| `pci-logconf-audit.py` | 解码上面那些字节：`BootConfig` = `CM_RESOURCE_LIST`（**固件交接**），`BasicConfigVector` = `IO_RESOURCE_REQUIREMENTS_LIST`（**需求孔径**）。含 **Type 7 `MemoryLarge` 长度字段 = length ÷ 256** 这条规则及其证明（见脚本 docstring） |
 | `pci-resource-audit.py` | 从 `1401/plan.json` 的 `resource_record` 生成资源图（`docs/08` §10.1 引用）。`plan.json` 路径改为**命令行参数** |
+| `cfgmgr-resdes-probe.cs` | 原生 x64 只读探针：`CM_Get_First_Log_Conf(BASIC/ALLOC/BOOT)` + `CM_Get_Next_Res_Des`，**32 位 `ULONG` 句柄声明与零初始化指针宽度声明都试**，`ForType` 扫遍 `0x00…0x41`。只调用 `CM_*` 查询函数与 `*_Handle` 释放函数；**不**调用 `CM_Modify_Res_Des` / `CM_Add_Res_Des` / `CM_Add_Empty_Log_Conf` / `CM_Free_Res_Des` / `CM_Free_Log_Conf` |
 | `results/pci-windows-2026-10-13.md` / `.json` | 上者在本机的输出，**已脱敏**：只保留 BDF、`VEN/DEV/SUBSYS/REV`、类名、ACPI 路径、窗口区间、总线号 |
+| `results/pci-logconf-2026-10-13.md` / `.json` | 注册表逻辑配置的解码结果（**已脱敏**：不含实例 ID） |
 | `results/pci-resource-plan-2026-10-13.txt` | `pci-resource-audit.py` 的原始输出 |
 
 复现：
@@ -19,7 +23,17 @@ pnputil /enum-devices /connected /deviceids /relations /location /properties /re
          /format xml /output-file pnputil-all.xml
 python audit\pci-windows-audit.py pnputil-all.xml --cfgmgr <1401>\plan.json `
        --out audit\results\pci-windows-<date>
+
+# 注册表逻辑配置（只读；原始转储只留本地，不入库）
+pwsh -File audit\dump-logconf.ps1
+python audit\pci-logconf-audit.py registry-logconf-all.txt pnputil-all.xml `
+       --cfgmgr <1401>\plan.json --out audit\results\pci-logconf-<date>
+
 python audit\pci-resource-audit.py <1401>\plan.json
+
+# CfgMgr32 调用形状探针（原生 x64）
+& "$env:SystemRoot\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /platform:x64 `
+      /out:cfgmgr-resdes-probe.exe audit\cfgmgr-resdes-probe.cs
 ```
 
 ## **绝不**入库的
@@ -36,7 +50,7 @@ python audit\pci-resource-audit.py <1401>\plan.json
 
 ## 脱敏规则（`pci-windows-audit.py --sanitize`，**默认开启**）
 
-* 每个 PCI 实例 ID 里那段**每机唯一的哈希**（`…\3&11583659&0&19` 的后半段）换成**该设备自己的拓扑标签**
+* 每个 PCI 实例 ID 里那段**每机唯一的哈希**（`…&REV_xx\<hash-component>` 的后半段）换成**该设备自己的拓扑标签**
   `…\REV_A1\<01:00.0>`；`Parent` 引用用同一张映射表，保持一致。
 * 丢弃：ContainerId / BaseContainerId、安装/首次安装/最后到达时间、CreatorProcessId、
   **全部 Binary 属性块**。

@@ -469,14 +469,41 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 >   `Memory/Prefetchable Base·Limit` **寄存器**在 Windows 用户态**取不到**
 >   （`CM_Get_First_Res_Des` 本机 DLL 未导出；传 `NULL` 返回 `CR_INVALID_FLAG(4)`），
 >   只能**派生**次级总线号，且无子设备的桥 = **未知**。
-> * **GP11 仍是线索而非异常**：三种解读（空槽预留／固件过分配／真异常）**本轮无法判定**，
->   **不据此提议任何 SSDT**；区分它们需要 Linux Live 的 `Slot` + `LnkSta` + 次级总线号。
-> * 对早期 "`0x00–0x100` 总线范围" 与四条"排除性结论"的**过度推断已逐条勘误**（docs/08 §10.5）。
+> * **GP11（`00:03.1`，`1022:14EF`）已重新识别 —— 不是异常**：本机固件自己证明它是
+>   **AMD USB4 / Thunderbolt 的 PCIe 隧道根端口**（`ssdt17_INTGPP03.dsl:3110-3133`：
+>   `Scope(\_SB.PCI0.GP11)` 的 `_DEP` 返回 `Package{ \_SB.PCI0.GP19.NHI0 }`，
+>   而 `NHI0` 就是 USB4 主机接口；该 `_DEP` 正是 `ssdt13_CPMMSOSC.dsl:244-258` 里
+>   受 BIOS 开关 `\DDEP` 控制的"USB4 ACPI _DEP"；另加 `_PRW` 唤醒 GPE、
+>   GPP PME 的 `Notify(GP11, 0x02)`、以及与 `NHI0/NHI1` 同处一张端口电源表）。
+>   ⇒ 它那 **384 MiB + 64 GiB** 的预留是**固件自己要求并分配的隧道孔径**，**不是过度分配**。
+> * **注册表是第三个 Windows 只读来源**：`Enum\PCI\<dev>\<inst>\LogConf` 的
+>   `BootConfig`（`CM_RESOURCE_LIST`，**固件交接**）与 `BasicConfigVector`
+>   （`IO_RESOURCE_REQUIREMENTS_LIST`，**需求孔径**）被完整解码，逐字节自洽。
+>   其中核对出一条关键规则：**Type 7 `MemoryLarge` 的长度字段 = length ÷ 256**
+>   （证据：RTX 4050 的 BAR1 = 8 GiB = `0x200000000` 有 33 位，若为 32 位字节字段会回绕成 0，
+>   实测为 `0x2000000`；而同一设备 Type 3 的 BAR3 同样读作 `0x2000000` 却真的是 32 MiB）。
+>   **GP11 的 64 GiB 孔径由此得到第三个独立确认。**
+> * **CfgMgr32 的归因已更正**：`CM_Get_First_Log_Conf(BASIC/ALLOC/BOOT)` 在本机全部成功，
+>   但 `CM_Get_Next_Res_Des`（含文档所载"把 LOG_CONF 句柄当 `rdResDes`"的形式、`ForType` 扫遍
+>   `0x00–0x41`、32 位与指针宽度两种句柄声明）**一次都没返回 `CR_SUCCESS`**。
+>   这**不再**归因于"缺少 `CM_Get_First_Res_Des`"——该能力并未缺失：
+>   同一批描述符数据已从注册表完整读出并解码。**桥的总线号是 Windows 根本不记录的值**
+>   （25 个有 `LogConf` 的设备里 **0 个**含 `CmResourceTypeBusNumber` 描述符）。
+> * 🆕 **仍属预测的一条**：`GP11` 是否预留 `secondary=0x05 / subordinate=0x64`
+>   （实测在用总线为 `0x00–0x04` 与 `0x65–0x67`，空洞 `0x05–0x64` **恰为 96 条**，
+>   而下一座桥正好拿到 `0x65 = 5 + 96`）。**这是预测，不是实测**；只有 Linux 配置空间能实测。
+> * 对早期 "`0x00–0x100` 总线范围" 与四条"排除性结论"的**过度推断已逐条勘误**（docs/08 §10.5、§11.5）。
 >
-> **下一轮（未批准写盘）**：若要判定 GP11 的三种解读，执行
-> [Linux Live 只读采集预案](docs/09-Linux-Live只读采集方案.md)
-> （从**固件启动菜单**直接引导，**不经过 OpenCore**，禁止 `setpci` 写/复位/解绑/重分配）。
-> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §10 / §11 与
+> **下一轮（未批准写盘）**：**为"资源冲突/桥枚举"去用 Linux 已无必要** ——
+> Windows 侧已查完（含用注册表第三来源独立复核全部桥窗口），且 GP11 已由固件识别为 USB4 隧道端口。
+> Linux Live 的唯一剩余价值是**把 GP11 的总线号预测变成实测**（以及顺便取寄存器原值做基线），
+> 属**可选、低优先级**：见 [Linux Live 只读采集预案](docs/09-Linux-Live只读采集方案.md)
+> 与 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §12.5。
+> 若执行：从**固件启动菜单**直接引导，**不经过 OpenCore**；用 `lspci -Dnnvv` 与
+> `lspci -x -s <bdf>`（**前 64 字节足够**，不用 `-xxx/-xxxx`）；
+> 禁止 `setpci` 写、复位、解绑，以及 `pci=realloc`/`pci=nocrs`/`pci=assign-busses`/`pci=noearly`
+> 这类改变 PCI 初始化行为的参数。
+> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §10 / §11 / §12 与
 > [docs/05](docs/05-受控实验记录.md) §7.20。
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
