@@ -608,6 +608,12 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
   必须换手段，例如只读比较 `pci_log_mode=0x1` 与 `0x4` 的差异）；
 * (c) 新行停在一个具体设备/BAR → 直接定位，下一轮可以做**针对性**单变量。
 
+**附加收益（顺手解决 U1）**：`IOPCIConfigurator.cpp` 里还有一批
+`DLOG_RANGE(name, range)` / `DLOGI_RANGE` 会打印 IOPCIFamily **实际拿到的** `start/size/proposedSize`
+（`pci_log` 的 `ENUMERATION` 级别，源码 `:83-89`）。这些行会直接暴露"`_CRS` 到底报了几个窗口、
+`hasHost64` 是否成立"，从而把 §2.7 的 U1（只能靠 `NRSV` RAM 状态才能定的东西）
+从"ACPI 层面不可知"变成"实测可读"。**这是候选 A 相对其它候选的额外价值。**
+
 **风险**：极低。不碰 `gIOPCIFlags`；不碰 ACPI/MMIO/kext；日志量增大可能把有用行刷出屏幕
 （对策：拍照时对准**最后**一屏，并同时记录停留时长）。
 
@@ -643,6 +649,13 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 `Copy-Item D:\_backup-round0\config.plist.round4 D:\EFI\OC\config.plist -Force`（写入前创建该备份）。
 
 **不能证明什么**：同 §2.5 末条。
+
+> **更"知情"的变体 B′（**需要单独授权**，因为要动 `MmioWhitelist`）**：§2.5 已证明五块里只有
+> `0xFD000000` 与 `0x460000000` 两块在 ACPI 里**完全没有主人**，而 `0xE0000000`（ECAM）与
+> `0xFEE00000`（LAPIC）是 macOS 自己会重映射的、ACPI 已声明的硬件。所以如果真要做
+> "保住固件运行期映射"这个实验，**受控得多的做法**是保留 `DevirtualiseMmio=true`
+> 而只把那两块放进 `MmioWhitelist`（`skip 1`），**而不是**整个关掉 devirt。
+> 但 `MmioWhitelist` 属于用户明确列为"未获批准不得触碰"的项，**本轮只登记，不排入。**
 
 ### 候选 C —— 删掉已证无效的 `SSDT-Disable_Network_GPP6`
 
