@@ -907,6 +907,21 @@ EFI 内存描述符，ACPI 只能解释它们，不能证明谁在用它们。
 > 备份 `D:\_backup-round0\config.plist.round4`，`ocvalidate` → **No issues found**。
 > 写入记录与判据见 `docs/05` §7.12；**待引导验证，不得自动进入 Round 6**。
 > 候选文件已从 `efi/candidates/` 转正（即当前的 `efi/config.plist`）。
+>
+> **📌 引导结果（已回填，详见 `docs/05` §7.13）**
+> * **日志侧三项全部符合预期**：`DEVMMIO 0` ✅；7 行 `OCABC: MMIO devirt …` **全部消失** ✅；
+>   **没有**任何早期内存映射错误（无 `EB.MM.AKM` / `STOP 0x16` / `No slide values are usable`）✅。
+>   两份日志（`logs/opencore-2026-10-13-143611.txt` / `…-143926.txt`）去时间戳后**逐行相同**；
+>   对照（MAT 三元组、无 `npci`、`Prelinked status - Success`、RBAR 段、slide 可用性）**逐字未变**。
+> * **屏幕侧（仅第 1 次引导有照片）**：屏幕停在 boot.efi 的 `#[EB|LOG:EXITBS:START]`，
+>   **其下没有任何 macOS 内核输出**（OpenCore 选择菜单仍留在顶部）⇒ **内核零输出** ⇒
+>   **没有**重新到达 `PCI configuration`、**没有** `PCI configuration end`、**没有** Recovery。
+> * **判定**：失败点**前移**（Round 4 到过 `PCI configuration begin`；本轮内核一行未打印）。
+>   按批准时修正的判据，这**只**说明该设置**影响了内存映射或启动兼容性** ——
+>   **不得**推断"固件运行期访问了某块 MMIO"，**不得**据此给出 `MmioWhitelist` 地址（U8 仍未决）。
+>   且**未出现** `EB.MM.AKM` / `STOP 0x16` ⇒ **不是** issue #9 那类 boot.efi 阶段失败；
+>   失败点落在 `EXITBS:START` **之后**、内核首次打印**之前**，**日志无法定位**。
+> * **两个缺口**：第 2 次引导**无照片**；本轮**无停留时长**（照片拍摄于 `EXITBS:START` 后约 84 s）。
 
 **为什么它比其它候选更有信息量（这是问题的核心）**
 

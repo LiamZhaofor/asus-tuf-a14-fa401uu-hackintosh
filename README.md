@@ -282,6 +282,33 @@ AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
 * 备份：`D:\_backup-round0\config.plist.round4`；回滚一步命令见 `docs/05` §7.12。
 * 未使用 GitHub 脱敏候选覆盖真实 EFI —— **SMBIOS 与备份逐字节相同**。
 
+**已引导，结果见 [docs/05](docs/05-受控实验记录.md) §7.13**（两次引导，
+`logs/opencore-2026-10-13-143611.txt` 与 `…-143926.txt`）：
+
+| 检查项 | 结果 |
+|---|---|
+| `DEVMMIO=0` | ✅ |
+| 5 条 `OCABC: MMIO devirt …` 不再出现 | ✅ **0 次** |
+| 是否提前出现内存映射错误 | ❌ **没有**（无 `EB.MM.AKM`/`STOP 0x16`/`No slide values are usable`；`Valid slides - 81-255` 与 Round 4 逐字相同） |
+| 是否重新到达 `PCI configuration` | ❌ **没有** |
+| 是否出现 `PCI configuration end` / 进入 Recovery | ❌ **都没有** |
+
+> **屏幕侧（仅第 1 次引导有照片 `IMG20261013143753.jpg`）**：屏幕停在 boot.efi 的
+> `#[EB|LOG:EXITBS:START]`，**其下没有任何 macOS 内核输出**（OpenCore 选择菜单仍留在顶部）
+> ⇒ **内核零输出**。参照：Round 2 在引导后约 90 秒时屏幕已滚过约 40 行内核输出。
+> ⇒ **失败点前移**：Round 4 到过 `PCI configuration begin`，本轮内核一行未打印。
+>
+> **推论限制（按批准时的判据修正）**：这**只**说明 `DevirtualiseMmio=false`
+> **影响了内存映射或启动兼容性**。**不能**推断"固件运行期访问了某块 MMIO"，
+> **不能**据此确定任何 `MmioWhitelist` 地址。且**未出现** `EB.MM.AKM`/`STOP 0x16`
+> ⇒ **不是** issue #9 那类 boot.efi 阶段失败；失败点落在 `EXITBS:START` 之后、
+> 内核首次打印之前，**日志无法定位**。
+>
+> **两个观测缺口**：第 2 次引导**无照片**；本轮**无停留时长**（照片拍摄于 `EXITBS:START` 后约 84 s）。
+
+**⛔ 卡上仍为 Round 5B**（`34605D9D…`）。在补齐上述两个缺口之前，
+**不修改 EFI / BIOS / MMIO 白名单**，**不自动进入 Round 6**。
+
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
 > 而 macOS 15.6 时代的 tag（≤ `681.140.3`，2025-08-20）**全都没有**；
