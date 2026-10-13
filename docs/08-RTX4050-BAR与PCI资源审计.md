@@ -534,6 +534,26 @@ nvidia-smi -q -d MEMORY          # 期望 BAR1 Total = 8192 MiB（本轮已实�
 > **⚠️ 不要去找第二行 `OC: Setting GPU BARs`** —— 阶段 B 的调用点**源码里没有这条 DEBUG**（§9.2）。
 > 阶段 B 的判据**只有** `OCDM: RBAR 2/3 … from X to Y` 与第二次的 `OCDM: RBAR using PciIo`。
 
+**阶段 A 在日志里的确切位置（① 用 Round 6 日志定位，可逐行核对）**
+
+Round 6（`ResizeGpuBars = -1`）里该处**没有任何输出**，但上下文锚点齐全：
+
+```
+00:233 00:003 OC: OcLoadUefiSupport...
+...
+00:286 00:003 OCDM: Found 0x20050/0x20050 UEFI version (376 bytes, …)
+00:289 00:003 OC: AVX enabled - 1
+00:293 00:003 OC: Got 4 drivers          ← 阶段 A 的 if 块就在这两行之间
+```
+
+⇒ **Round 7 的 `OC: Setting GPU BARs to 0` 应紧跟在 `OC: AVX enabled - 1` 之后、
+`OC: Got 4 drivers` 之前出现**（`OcLoadUefiSupport` 内 AVX 块之后即该 `if` 块），
+随后是阶段 A 的一整组 `OCDM:` 行。
+
+⇒ 这也**量化了风险**：阶段 A 发生在 **`00:2xx`（OpenCore 启动约 0.3 秒）**，
+即**选择界面绘制之前很久** —— 一旦 BAR 缩小破坏 GOP framebuffer，
+**受影响的是选择界面本身**（与 issue #23 一致）。
+
 **必须确认两组输出对应同一台 RTX 4050**（用户明确要求，不得只看"两行相似字符串"）：
 
 | 交叉核对项 | 期望值（两侧必须一致） |
