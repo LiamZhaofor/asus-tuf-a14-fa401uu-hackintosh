@@ -5,10 +5,10 @@
 >
 > **状态：进行中（未安装完成）。** 第一轮修好了"`boot-args` 从未生效"这个把此前所有结论都
 > 污染掉的问题；第二轮（禁用 VoodooI2C 家族）六项预注册检查**全部符合预期**。
-> 第三轮（只移除 `npci=0x2000`）**已写入并已引导**：日志侧确认 `MBA:OUT` 里已无任何 `npci=`、
-> 四个 VoodooI2C 仍未注入、其它对照项逐字未变；屏幕最后停在 `RTC: Only single RAM bank`
-> （**不是已确认死因**）。**内核侧结论仍待定** —— 尚缺 **≥10 分钟停留时长**与全屏照片。
-> 第四轮候选（MAT 内存映射三元组）**已准备、待批准** —— 见
+> 第三轮（只移除 `npci=0x2000`）已正式记录为「**实验配置生效，但未能成功启动**」——
+> 配置侧有日志实证，屏幕侧在 `RTC: Only single RAM bank` 处 **≥10 分钟无输出且未进 Recovery**；
+> 该行**不是**已确认死因，且**未**据此排除 npci 的影响。
+> 第四轮（MAT 内存映射三元组）**已写入卡上、待引导验证** —— 见
 > [受控实验记录](docs/05-受控实验记录.md) 与 [引导排错实录](docs/03-引导排错实录.md)。
 
 ---
@@ -185,16 +185,21 @@ RTC: Only single RAM bank (128 bytes)                       ← 最后一行
 > 若本轮仍卡住，**只能**记为"移除 npci 不足以解决当前问题"—— **不能**据此排除 npci 本身的影响，
 > **也不能**因此锁定 ACPI/MAT。详见 [受控实验记录](docs/05-受控实验记录.md) §6。
 
-**屏幕现象（用户报告）**：最后一行是 `RTC: Only single RAM bank (128 bytes)`。
-**⚠️ 它不是已确认的死因** —— 该行是 AppleRTC 的信息性输出，而且"最后一行"在四轮之间来回移动
-（修复前是这条、round1 是 VoodooI2C `start()`、round2 是 `PCI configuration begin`），
-不给出停留时长就无法区分"停点不稳定"与"阶段本来慢"。
-同样，`OC: Panic log does not exist` 出现在 `01:129`（boot.efi 启动**之前**），
-**不能**用来证明内核没有故障。
+**屏幕现象（用户报告并已确认停留时长）**：最后一行是 `RTC: Only single RAM bank (128 bytes)`，
+在此处**连续 ≥10 分钟无新输出、未进入 Recovery**。
 
-### 7. 第四轮候选（已准备，待批准）：MAT 内存映射三元组
+> **正式结论：实验配置生效，但未能成功启动。**
+> **⚠️ 两条不许越界的推论**：(1) 该行**不是**已确认死因 —— 它是 AppleRTC 的信息性输出，
+> 且"最后一行"在四轮之间来回移动（修复前是这条、round1 是 VoodooI2C `start()`、
+> round2 是 `PCI configuration begin`），本轮没有任何指向 RTC 子系统的独立证据；
+> (2) 本轮只证明"**移除 npci 不足以解决问题**"，**不能**说明 npci 原本没有影响，
+> 也**不能**据此锁定 ACPI / MAT / IOMMU。
+> 另：`OC: Panic log does not exist` 出现在 `01:129`（boot.efi 启动**之前**），
+> **不能**用来证明内核没有故障。
 
-| Quirk | 卡上现状 | 候选 |
+### 7. 第四轮（已写入卡上，待引导验证）：MAT 内存映射三元组
+
+| Quirk | round3（改前） | round4（**卡上现状**） |
 |---|---|---|
 | `EnableWriteUnprotector` | `True` | **`False`** |
 | `RebuildAppleMemoryMap` | `False` | **`True`** |
@@ -211,9 +216,15 @@ AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
 **必须同时知道的反面证据**：第 2、3 次引导**已经跑过这组组合**并同样停住 ——
 但那两次 `npci` **未被应用**、I2C 家族**仍启用**。所以本轮是它**第一次**在干净条件下运行。
 
-精确 diff（**3 行**）、判定标准、回滚与 Round 5 方向见
-[受控实验记录](docs/05-受控实验记录.md) §7；候选：
-[`efi/candidates/round4-mat-triple.plist`](efi/candidates/round4-mat-triple.plist)（`ocvalidate` 0 issues）。
+精确 diff（**3 行**，1-based 行号 181 / 199 / 207）、判定标准、回滚与 Round 5 方向见
+[受控实验记录](docs/05-受控实验记录.md) §7。
+
+**写入结果**：`021F02B3B4695302…`（52124 B，`ocvalidate` 1.0.9 → 0 issues，SMBIOS 原样保留，
+`Booter.Quirks` 里**恰好只有这 3 个键**变化，其余段落逐字节未变；42 项自检全 PASS）。
+回滚：`D:\_backup-round0\config.plist.round3`。
+
+**执行后即停止** —— 未获批准**不执行 Round 5**，**不**额外修改 MMIO 白名单、ACPI、IOMMU、
+`npci`、BAR 或其它 kext。
 
 ---
 
