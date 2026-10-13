@@ -11,13 +11,15 @@
 
 | 候选 | 相对卡上状态 | 状态 |
 |---|---|---|
-| *（当前无待批准候选）* | — | — |
+| [`round6-npci-0x3000.plist`](round6-npci-0x3000.plist) | `NVRAM → Add → 7C436110-…:boot-args` 末尾追加 ` npci=0x3000`（**仅此 1 行**，1-based 行号 1920；52124 → 52136 B） | **待批准**（Round 6 唯一候选，见 `docs/07` §8 与 §10） |
 
 > `round5B-devirtualisemmio-false.plist` 已于 **2026-10-13 获批并写入卡上**
 > （`Booter.Quirks.DevirtualiseMmio`：`true` → `false`，**只此 1 行**，1-based 行号 171；
-> 卡上 `021F02B3…` → `34605D9D…`，52124 → 52125 B，`ocvalidate` → No issues found），
-> 因此转正为 `efi/config.plist` 并从本目录移除。
-> 写入记录、判据与回滚见 `docs/05` §7.12；候选评估见 `docs/06` §4.6。
+> 卡上 `021F02B3…` → `34605D9D…`，52124 → 52125 B，`ocvalidate` → No issues found）。
+> **该轮已引导并结案**：配置生效、实机未能成功启动、**首轮已确认 ≥10 分钟无新屏幕输出**
+> （次轮只有 OpenCore 日志、无照片，**不得**记为同样等待 10 分钟）。
+> **随后已按批准回滚到 Round 4**（卡上现为 `021F02B3…`）。
+> 记录见 `docs/05` §7.13 / §7.14，候选评估见 `docs/06` §4.6。
 
 > `round4-mat-triple.plist` 已于获批后**写入卡上**，因此转正为 `efi/config.plist` 并从本目录移除。
 > 其改动（3 行，`EnableWriteUnprotector` / `RebuildAppleMemoryMap` / `SyncRuntimePermissions`）

@@ -304,10 +304,51 @@ AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
 > ⇒ **不是** issue #9 那类 boot.efi 阶段失败；失败点落在 `EXITBS:START` 之后、
 > 内核首次打印之前，**日志无法定位**。
 >
-> **两个观测缺口**：第 2 次引导**无照片**；本轮**无停留时长**（照片拍摄于 `EXITBS:START` 后约 84 s）。
+> **观测完整性（结案后）**：**首轮已确认** —— 实机操作者确认照片最后显示
+> `[EB|LOG:EXITBS:START]`，其后**连续等待 >10 分钟**无新屏幕输出，未进入 Recovery。
+> **次轮（14:39）只有 OpenCore 日志、没有照片** ⇒ **不得**写成"次轮也确认等待了 10 分钟"，
+> 只能记为"次轮 OpenCore 阶段与首轮逐行同型，屏幕状态未验证"。
 
-**⛔ 卡上仍为 Round 5B**（`34605D9D…`）。在补齐上述两个缺口之前，
-**不修改 EFI / BIOS / MMIO 白名单**，**不自动进入 Round 6**。
+### Round 5B 正式结案 + 已回滚到 Round 4
+
+> **Round 5B 定稿：配置生效、实机未能成功启动、首轮已确认 ≥10 分钟无新屏幕输出。**
+
+记录（实机）：**禁用 `DevirtualiseMmio` 后，最后可见输出相比 Round 4 明显前移**
+（Round 4 到过 `[ PCI configuration begin ]`；Round 5B 内核一行未打印），
+**但不能确认具体故障指令或 MMIO 地址**。
+
+| 回滚步骤 | 结果 |
+|---|---|
+| 回滚前卡上 SHA-256 | ✅ `34605D9D…`（== 批准基线） |
+| 备份有效性 | ✅ `D:\_backup-round0\config.plist.round4` == `021F02B3…` |
+| 执行 | `Copy-Item D:\_backup-round0\config.plist.round4 D:\EFI\OC\config.plist -Force` |
+| **回滚后 SHA-256** | ✅ **`021F02B3B46953021FF31835518790DD6BEB57074BE822D127305434581815E4`**（52124 B） |
+| `ocvalidate` 1.0.9 DEBUG（卡上） | ✅ **No issues found**（exit 0） |
+
+**卡上现状 = Round 4**（`021F02B3…`）。本轮未批准任何其它 EFI 修改。
+上游案例复核与 Round 6 候选见 **[docs/07-上游案例复核与Round6候选.md](docs/07-上游案例复核与Round6候选.md)**。
+
+### Round 6 候选（**只准备，未写入 U 盘**）
+
+**单变量**：`NVRAM → Add → 7C436110-…:boot-args` 末尾追加 ` npci=0x3000`（**仅此 1 行**，
+1-based 行号 **1920**；52124 → **52136** B；卡上预测 SHA-256 **`43ABBAD5…`**）。
+候选文件 [`efi/candidates/round6-npci-0x3000.plist`](efi/candidates/round6-npci-0x3000.plist)
+（`ocvalidate` → No issues found）。其余全部不动：`DevirtualiseMmio=True`、`SetupVirtualMap=True`、
+MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 VoodooI2C 仍禁用、
+`MmioWhitelist=[]`、ACPI 7 条、`Kernel.Patch` 27 条、SMBIOS。详见 docs/07 §8 / §10。
+
+> **为什么是它**：Round 5B 已把"内存图"这一轴指向**变差**方向，所以下一步不该在同一轴继续试错，
+> 而应当**用最低成本把唯一还没走完的 boot-arg 轴（`npci`）走完** ——
+> 目前只有 `npci=0x2000` 在**本停点**被测过；Dortania 与 1401 的 `bootfix.py` 都会在它失败后
+> 再试 `0x3000`。测完就能把结论从"`0x2000` 不足"升级为
+> "**整条 `npci` 阶梯都不足以进入 Recovery**"，从而把怀疑范围**干净地**压到
+> `configure()` 内部的资源/BAR 分配上。
+> **不预设它比 `npci=0x2000` 更有效** —— 源码上两者的唯一差别只是多清 `kIOPCIConfiguratorTBMSIEnable`，
+> 而该位只作用于 Thunderbolt 隧穿 MSI 路径（IOPCIFamily-681.140.3 `IOPCIBridge.cpp:5723`），
+> 与本机卡点先验关联度低；它的价值是**消除性**的。
+
+> **⛔ 卡上现为 Round 4；Round 6 未写入。** 未获批准前**不**修改 EFI / BIOS / 显卡 BAR /
+> `MmioWhitelist` / Windows EFI / BCD / 分区，**不**重新生成覆盖整个 EFI。
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
@@ -395,6 +436,7 @@ docs/03-引导排错实录.md            ★ 每次引导卡死的证据、根�
 docs/04-驱动核对.md               kext 逐个审计（版本/架构/顺序/依赖）
 docs/05-受控实验记录.md            ★ 当前在测什么：实验设计、精确 diff、判据、回滚
 docs/06-只读分析与Round5候选.md    ★ 只读 ACPI/PCI 分析、上游案例复核、Round 5 候选（只给 diff）
+docs/07-上游案例复核与Round6候选.md ★ Round 5B 结案与回滚、Acer 案例复核、IOPCIFamily-681 标志位、1401 版本策略对比、Round 6 候选
 hardware/本机配置摘要.md           脱敏后的硬件清单
 efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
 efi/README.md                    kext 清单与用 1401 重建的方法
