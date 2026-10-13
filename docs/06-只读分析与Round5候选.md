@@ -991,7 +991,15 @@ EFI 内存描述符，ACPI 只能解释它们，不能证明谁在用它们。
 | `README.md` | Round 4 实测结果更新为"已确认 ≥10 分钟无新屏幕输出" |
 
 **未入库**（且不得入库）：`audit/acpi/firmware/**`（ACPI 二进制与反编译，含 `MSDM` 的 OEM 密钥）、
-`audit/iopicifamily/**`、`audit/*.py`、屏幕照片、任何 `.aml` / `.bin` / `.efi`。
+`audit/iopicifamily/**`、屏幕照片、任何 `.aml` / `.bin` / `.efi`。
+
+> **2026-10-13（Round 8）对上面这条的收窄**：`audit/*.py` **不再一律禁止入库**。
+> 经用户授权，**只读**审计脚本可以入库，前提是：路径参数化、不含固件数据、
+> 输出经过脱敏并由 `scripts/sync-to-github.ps1` 的 leak scan 通过。
+> 已入库：`audit/pci-resource-audit.py`、`audit/pci-windows-audit.py` 与
+> `audit/results/**`；清单与规则见 **`audit/README.md`**。
+> 上表其余各项（ACPI 二进制/反编译、第三方源码、照片、各类二进制产物）
+> **仍然一律禁止入库**。
 
 ---
 

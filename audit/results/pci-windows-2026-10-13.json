@@ -1,0 +1,2647 @@
+{
+ "sources": {
+  "pnputil_xml": "pnputil-all.xml",
+  "cfgmgr_plan_json": "plan.json",
+  "note": "pnputil = PnP IRP/CM view; cfgmgr = CfgMgr32 ALLOC_LOG_CONF. Both are Windows-side snapshots of the SAME boot; neither is a register dump and neither is macOS's assignment."
+ },
+ "device_count_pci": 42,
+ "devices": [
+  {
+   "bdf": "00:00.0",
+   "vendor_device": "VEN_1022&DEV_14E8&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14E8&SUBSYS_1E431043&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(D002)",
+   "pci_path": "PCIROOT(0)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:01.0",
+   "vendor_device": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(0100)",
+   "pci_path": "PCIROOT(0)#PCI(0100)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:01.1",
+   "vendor_device": "VEN_1022&DEV_14ED&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14ED&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP0)",
+   "pci_path": "PCIROOT(0)#PCI(0101)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xDC000000",
+     "0xDD0FFFFF"
+    ],
+    [
+     "0x7C00000000",
+     "0x7E01FFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDC000000",
+     "0xDD0FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDC000000",
+      "0xDD0FFFFF"
+     ],
+     "length": 17825792,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7C00000000",
+      "0x7E01FFFFFF"
+     ],
+     "length": 8623489024,
+     "prefetchable": true,
+     "large_descriptor": true
+    }
+   ],
+   "io_merged": [
+    [
+     61440,
+     65535
+    ]
+   ],
+   "irq": [
+    "0xFFFFFFFE (-2)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:02.0",
+   "vendor_device": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(0200)",
+   "pci_path": "PCIROOT(0)#PCI(0200)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:02.1",
+   "vendor_device": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP5)",
+   "pci_path": "PCIROOT(0)#PCI(0201)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xDDF00000",
+     "0xDDFFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDF00000",
+     "0xDDFFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDF00000",
+      "0xDDFFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFFD (-3)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:02.2",
+   "vendor_device": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP6)",
+   "pci_path": "PCIROOT(0)#PCI(0202)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xDDB00000",
+     "0xDDCFFFFF"
+    ],
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDB00000",
+     "0xDDCFFFFF"
+    ],
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDB00000",
+      "0xDDCFFFFF"
+     ],
+     "length": 2097152,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7FFFF00000",
+      "0x7FFFFFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFFC (-4)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:02.4",
+   "vendor_device": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP8)",
+   "pci_path": "PCIROOT(0)#PCI(0204)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xDDE00000",
+     "0xDDEFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDE00000",
+     "0xDDEFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDE00000",
+      "0xDDEFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFFB (-5)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:03.0",
+   "vendor_device": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(0300)",
+   "pci_path": "PCIROOT(0)#PCI(0300)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:03.1",
+   "vendor_device": "VEN_1022&DEV_14EF&SUBSYS_14531022&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EF&SUBSYS_14531022&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP11)",
+   "pci_path": "PCIROOT(0)#PCI(0301)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xC4000000",
+     "0xDBFFFFFF"
+    ],
+    [
+     "0x6C00000000",
+     "0x7BFFFFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xC4000000",
+     "0xDBFFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xC4000000",
+      "0xDBFFFFFF"
+     ],
+     "length": 402653184,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x6C00000000",
+      "0x7BFFFFFFFF"
+     ],
+     "length": 68719476736,
+     "prefetchable": true,
+     "large_descriptor": true
+    }
+   ],
+   "io_merged": [
+    [
+     40960,
+     57343
+    ]
+   ],
+   "irq": [
+    "0xFFFFFFCC (-52)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:04.0",
+   "vendor_device": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(0400)",
+   "pci_path": "PCIROOT(0)#PCI(0400)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:08.0",
+   "vendor_device": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EA&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(0800)",
+   "pci_path": "PCIROOT(0)#PCI(0800)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:08.1",
+   "vendor_device": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)",
+   "pci_path": "PCIROOT(0)#PCI(0801)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xDD200000",
+     "0xDD7FFFFF"
+    ],
+    [
+     "0x7E10000000",
+     "0x7E207FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD200000",
+     "0xDD7FFFFF"
+    ],
+    [
+     "0x7E10000000",
+     "0x7E207FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD200000",
+      "0xDD7FFFFF"
+     ],
+     "length": 6291456,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7E10000000",
+      "0x7E207FFFFF"
+     ],
+     "length": 276824064,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [
+    [
+     57344,
+     61439
+    ]
+   ],
+   "irq": [
+    "0xFFFFFFFA (-6)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:08.2",
+   "vendor_device": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP18)",
+   "pci_path": "PCIROOT(0)#PCI(0802)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xDDD00000",
+     "0xDDDFFFFF"
+    ],
+    [
+     "0x7E20900000",
+     "0x7E209FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDD00000",
+     "0xDDDFFFFF"
+    ],
+    [
+     "0x7E20900000",
+     "0x7E209FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDD00000",
+      "0xDDDFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7E20900000",
+      "0x7E209FFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFF9 (-7)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:08.3",
+   "vendor_device": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "desc": "PCI Express 根端口",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)",
+   "pci_path": "PCIROOT(0)#PCI(0803)",
+   "is_bridge": true,
+   "windows_merged": [
+    [
+     "0xDD800000",
+     "0xDDAFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD800000",
+     "0xDDAFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD800000",
+      "0xDDAFFFFF"
+     ],
+     "length": 3145728,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFF8 (-8)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:14.0",
+   "vendor_device": "VEN_1022&DEV_790B&SUBSYS_1E431043&REV_71",
+   "subsys_rev": "VEN_1022&DEV_790B&SUBSYS_1E431043&REV_71",
+   "desc": "AMD SMBUS",
+   "class": "System",
+   "status": "Stopped",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(D02D)",
+   "pci_path": "PCIROOT(0)#PCI(1400)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:14.3",
+   "vendor_device": "VEN_1022&DEV_790E&SUBSYS_1E431043&REV_51",
+   "subsys_rev": "VEN_1022&DEV_790E&SUBSYS_1E431043&REV_51",
+   "desc": "PCI 标准 ISA 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(SBRG)",
+   "pci_path": "PCIROOT(0)#PCI(1403)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.0",
+   "vendor_device": "VEN_1022&DEV_14F0&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F0&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1800)",
+   "pci_path": "PCIROOT(0)#PCI(1800)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.1",
+   "vendor_device": "VEN_1022&DEV_14F1&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F1&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1801)",
+   "pci_path": "PCIROOT(0)#PCI(1801)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.2",
+   "vendor_device": "VEN_1022&DEV_14F2&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F2&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1802)",
+   "pci_path": "PCIROOT(0)#PCI(1802)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.3",
+   "vendor_device": "VEN_1022&DEV_14F3&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F3&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1803)",
+   "pci_path": "PCIROOT(0)#PCI(1803)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.4",
+   "vendor_device": "VEN_1022&DEV_14F4&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F4&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1804)",
+   "pci_path": "PCIROOT(0)#PCI(1804)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.5",
+   "vendor_device": "VEN_1022&DEV_14F5&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F5&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1805)",
+   "pci_path": "PCIROOT(0)#PCI(1805)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.6",
+   "vendor_device": "VEN_1022&DEV_14F6&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F6&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1806)",
+   "pci_path": "PCIROOT(0)#PCI(1806)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "00:18.7",
+   "vendor_device": "VEN_1022&DEV_14F7&SUBSYS_00000000&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14F7&SUBSYS_00000000&REV_00",
+   "desc": "PCI 标准主机 CPU 桥",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "non-pci",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#PCI(1807)",
+   "pci_path": "PCIROOT(0)#PCI(1807)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "01:00.0",
+   "vendor_device": "VEN_10DE&DEV_28E1&SUBSYS_1E431043&REV_A1",
+   "subsys_rev": "VEN_10DE&DEV_28E1&SUBSYS_1E431043&REV_A1",
+   "desc": "NVIDIA GeForce RTX 4050 Laptop GPU",
+   "class": "Display",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:01.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP0)#ACPI(PEGP)",
+   "pci_path": "PCIROOT(0)#PCI(0101)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDC000000",
+     "0xDCFFFFFF"
+    ],
+    [
+     "0x7C00000000",
+     "0x7DFFFFFFFF"
+    ],
+    [
+     "0x7E00000000",
+     "0x7E01FFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDC000000",
+     "0xDCFFFFFF"
+    ],
+    [
+     "0x7E00000000",
+     "0x7E01FFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDC000000",
+      "0xDCFFFFFF"
+     ],
+     "length": 16777216,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7C00000000",
+      "0x7DFFFFFFFF"
+     ],
+     "length": 8589934592,
+     "prefetchable": true,
+     "large_descriptor": true
+    },
+    {
+     "range": [
+      "0x7E00000000",
+      "0x7E01FFFFFF"
+     ],
+     "length": 33554432,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [
+    [
+     61440,
+     61567
+    ]
+   ],
+   "irq": [
+    "0xFFFFFFD4 (-44)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "01:00.1",
+   "vendor_device": "VEN_10DE&DEV_22BE&SUBSYS_1E431043&REV_A1",
+   "subsys_rev": "VEN_10DE&DEV_22BE&SUBSYS_1E431043&REV_A1",
+   "desc": "High Definition Audio 控制器",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:01.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP0)#ACPI(NHDA)",
+   "pci_path": "PCIROOT(0)#PCI(0101)#PCI(0001)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD0FC000",
+     "0xDD0FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD0FC000",
+     "0xDD0FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD0FC000",
+      "0xDD0FFFFF"
+     ],
+     "length": 16384,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0x00000019 (25)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "02:00.0",
+   "vendor_device": "VEN_10EC&DEV_525A&SUBSYS_202F1043&REV_01",
+   "subsys_rev": "VEN_10EC&DEV_525A&SUBSYS_202F1043&REV_01",
+   "desc": "Realtek PCIE CardReader",
+   "class": "MTD",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:02.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP5)#ACPI(DEV0)",
+   "pci_path": "PCIROOT(0)#PCI(0201)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDDFFF000",
+     "0xDDFFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDFFF000",
+     "0xDDFFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDFFF000",
+      "0xDDFFFFFF"
+     ],
+     "length": 4096,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFBB (-69)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "03:00.0",
+   "vendor_device": "VEN_14C3&DEV_0616&SUBSYS_E0DF105B&REV_00",
+   "subsys_rev": "VEN_14C3&DEV_0616&SUBSYS_E0DF105B&REV_00",
+   "desc": "MediaTek Wi-Fi 6E MT7922 (RZ616) 160MHz Wireless LAN Card",
+   "class": "Net",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:02.2",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP6)#ACPI(WLAN)",
+   "pci_path": "PCIROOT(0)#PCI(0202)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDDCF8000",
+     "0xDDCFFFFF"
+    ],
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDCF8000",
+     "0xDDCFFFFF"
+    ],
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDCF8000",
+      "0xDDCFFFFF"
+     ],
+     "length": 32768,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7FFFF00000",
+      "0x7FFFFFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFBA (-70)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "04:00.0",
+   "vendor_device": "VEN_15B7&DEV_5017&SUBSYS_501715B7&REV_01",
+   "subsys_rev": "VEN_15B7&DEV_5017&SUBSYS_501715B7&REV_01",
+   "desc": "标准 NVM Express 控制器",
+   "class": "SCSIAdapter",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:02.4",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP8)#ACPI(NVME)",
+   "pci_path": "PCIROOT(0)#PCI(0204)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDDE00000",
+     "0xDDE03FFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDE00000",
+     "0xDDE03FFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDE00000",
+      "0xDDE03FFF"
+     ],
+     "length": 16384,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFF7 (-9)",
+    "0xFFFFFFF6 (-10)",
+    "0xFFFFFFF5 (-11)",
+    "0xFFFFFFF4 (-12)",
+    "0xFFFFFFF3 (-13)",
+    "0xFFFFFFF2 (-14)",
+    "0xFFFFFFF1 (-15)",
+    "0xFFFFFFF0 (-16)",
+    "0xFFFFFFEF (-17)",
+    "0xFFFFFFEE (-18)",
+    "0xFFFFFFED (-19)",
+    "0xFFFFFFEC (-20)",
+    "0xFFFFFFEB (-21)",
+    "0xFFFFFFEA (-22)",
+    "0xFFFFFFE9 (-23)",
+    "0xFFFFFFE8 (-24)",
+    "0xFFFFFFE7 (-25)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "65:00.0",
+   "vendor_device": "VEN_1002&DEV_1900&SUBSYS_1E431043&REV_CC",
+   "subsys_rev": "VEN_1002&DEV_1900&SUBSYS_1E431043&REV_CC",
+   "desc": "AMD Radeon 780M Graphics",
+   "class": "Display",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(VGA_)",
+   "pci_path": "PCIROOT(0)#PCI(0801)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD200000",
+     "0xDD3FFFFF"
+    ],
+    [
+     "0xDD700000",
+     "0xDD77FFFF"
+    ],
+    [
+     "0x7E10000000",
+     "0x7E1FFFFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD200000",
+     "0xDD3FFFFF"
+    ],
+    [
+     "0xDD700000",
+     "0xDD77FFFF"
+    ],
+    [
+     "0x7E10000000",
+     "0x7E1FFFFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD200000",
+      "0xDD3FFFFF"
+     ],
+     "length": 2097152,
+     "prefetchable": true,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0xDD700000",
+      "0xDD77FFFF"
+     ],
+     "length": 524288,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7E10000000",
+      "0x7E1FFFFFFF"
+     ],
+     "length": 268435456,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [
+    [
+     61184,
+     61439
+    ]
+   ],
+   "irq": [
+    "0xFFFFFFD1 (-47)",
+    "0xFFFFFFD0 (-48)",
+    "0xFFFFFFCF (-49)",
+    "0xFFFFFFCE (-50)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "65:00.1",
+   "vendor_device": "VEN_1002&DEV_1640&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1002&DEV_1640&SUBSYS_1E431043&REV_00",
+   "desc": "High Definition Audio Bus",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(HDAU)",
+   "pci_path": "PCIROOT(0)#PCI(0801)#PCI(0001)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD7F8000",
+     "0xDD7FBFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD7F8000",
+     "0xDD7FBFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD7F8000",
+      "0xDD7FBFFF"
+     ],
+     "length": 16384,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0x00000027 (39)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "65:00.2",
+   "vendor_device": "VEN_1022&DEV_15C7&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_15C7&SUBSYS_1E431043&REV_00",
+   "desc": "AMD PSP 11.0 Device",
+   "class": "SecurityDevices",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#PCI(0002)",
+   "pci_path": "PCIROOT(0)#PCI(0801)#PCI(0002)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD600000",
+     "0xDD6FFFFF"
+    ],
+    [
+     "0xDD7FE000",
+     "0xDD7FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD600000",
+     "0xDD6FFFFF"
+    ],
+    [
+     "0xDD7FE000",
+     "0xDD7FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD600000",
+      "0xDD6FFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0xDD7FE000",
+      "0xDD7FFFFF"
+     ],
+     "length": 8192,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFE6 (-26)",
+    "0xFFFFFFE5 (-27)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "65:00.3",
+   "vendor_device": "VEN_1022&DEV_15B9&SUBSYS_201F1043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_15B9&SUBSYS_201F1043&REV_00",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "class": "USB",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(XHC0)",
+   "pci_path": "PCIROOT(0)#PCI(0801)#PCI(0003)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD500000",
+     "0xDD5FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD500000",
+     "0xDD5FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD500000",
+      "0xDD5FFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFCD (-51)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "65:00.4",
+   "vendor_device": "VEN_1022&DEV_15BA&SUBSYS_201F1043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_15BA&SUBSYS_201F1043&REV_00",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "class": "USB",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(XHC1)",
+   "pci_path": "PCIROOT(0)#PCI(0801)#PCI(0004)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD400000",
+     "0xDD4FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD400000",
+     "0xDD4FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD400000",
+      "0xDD4FFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFB9 (-71)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "65:00.5",
+   "vendor_device": "VEN_1022&DEV_15E2&SUBSYS_1E431043&REV_63",
+   "subsys_rev": "VEN_1022&DEV_15E2&SUBSYS_1E431043&REV_63",
+   "desc": "AMD Audio CoProcessor",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(ACP_)",
+   "pci_path": "PCIROOT(0)#PCI(0801)#PCI(0005)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD780000",
+     "0xDD7BFFFF"
+    ],
+    [
+     "0x7E20000000",
+     "0x7E207FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD780000",
+     "0xDD7BFFFF"
+    ],
+    [
+     "0x7E20000000",
+     "0x7E207FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD780000",
+      "0xDD7BFFFF"
+     ],
+     "length": 262144,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7E20000000",
+      "0x7E207FFFFF"
+     ],
+     "length": 8388608,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0x00000027 (39)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "65:00.6",
+   "vendor_device": "VEN_1022&DEV_15E3&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_15E3&SUBSYS_1E431043&REV_00",
+   "desc": "High Definition Audio 控制器",
+   "class": "System",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.1",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)#ACPI(AZAL)",
+   "pci_path": "PCIROOT(0)#PCI(0801)#PCI(0006)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD7C0000",
+     "0xDD7C7FFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD7C0000",
+     "0xDD7C7FFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD7C0000",
+      "0xDD7C7FFF"
+     ],
+     "length": 32768,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0x00000024 (36)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "66:00.0",
+   "vendor_device": "VEN_1022&DEV_14EC&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EC&SUBSYS_1E431043&REV_00",
+   "desc": "AMD PCI",
+   "class": "System",
+   "status": "Stopped",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.2",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP18)#PCI(0000)",
+   "pci_path": "PCIROOT(0)#PCI(0802)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "66:00.1",
+   "vendor_device": "VEN_1022&DEV_1502&SUBSYS_20CF1043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_1502&SUBSYS_20CF1043&REV_00",
+   "desc": "NPU Compute Accelerator Device",
+   "class": "ComputeAccelerator",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.2",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP18)#ACPI(NPU_)",
+   "pci_path": "PCIROOT(0)#PCI(0802)#PCI(0001)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDDD3E000",
+     "0xDDD3FFFF"
+    ],
+    [
+     "0xDDD40000",
+     "0xDDD7FFFF"
+    ],
+    [
+     "0xDDD80000",
+     "0xDDDFFFFF"
+    ],
+    [
+     "0x7E209C0000",
+     "0x7E209FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDD3E000",
+     "0xDDD3FFFF"
+    ],
+    [
+     "0xDDD40000",
+     "0xDDD7FFFF"
+    ],
+    [
+     "0xDDD80000",
+     "0xDDDFFFFF"
+    ],
+    [
+     "0x7E209C0000",
+     "0x7E209FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDD3E000",
+      "0xDDD3FFFF"
+     ],
+     "length": 8192,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0xDDD40000",
+      "0xDDD7FFFF"
+     ],
+     "length": 262144,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0xDDD80000",
+      "0xDDDFFFFF"
+     ],
+     "length": 524288,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7E209C0000",
+      "0x7E209FFFFF"
+     ],
+     "length": 262144,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFCB (-53)",
+    "0xFFFFFFCA (-54)",
+    "0xFFFFFFC9 (-55)",
+    "0xFFFFFFC8 (-56)",
+    "0xFFFFFFC7 (-57)",
+    "0xFFFFFFC6 (-58)",
+    "0xFFFFFFC5 (-59)",
+    "0xFFFFFFC4 (-60)",
+    "0xFFFFFFC3 (-61)",
+    "0xFFFFFFC2 (-62)",
+    "0xFFFFFFC1 (-63)",
+    "0xFFFFFFC0 (-64)",
+    "0xFFFFFFBF (-65)",
+    "0xFFFFFFBE (-66)",
+    "0xFFFFFFBD (-67)",
+    "0xFFFFFFBC (-68)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "67:00.0",
+   "vendor_device": "VEN_1022&DEV_14EC&SUBSYS_1E431043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_14EC&SUBSYS_1E431043&REV_00",
+   "desc": "AMD PCI",
+   "class": "System",
+   "status": "Stopped",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.3",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)#ACPI(XHC2)",
+   "pci_path": "PCIROOT(0)#PCI(0803)#PCI(0000)",
+   "is_bridge": false,
+   "windows_merged": [],
+   "windows_pnputil": [],
+   "windows_cfgmgr": [],
+   "io_merged": [],
+   "irq": [],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "67:00.3",
+   "vendor_device": "VEN_1022&DEV_15C0&SUBSYS_201F1043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_15C0&SUBSYS_201F1043&REV_00",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "class": "USB",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.3",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)#ACPI(XHC3)",
+   "pci_path": "PCIROOT(0)#PCI(0803)#PCI(0003)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD900000",
+     "0xDD9FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD900000",
+     "0xDD9FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD900000",
+      "0xDD9FFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFD2 (-46)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "67:00.4",
+   "vendor_device": "VEN_1022&DEV_15C1&SUBSYS_201F1043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_15C1&SUBSYS_201F1043&REV_00",
+   "desc": "AMD USB 3.10 可扩展主机控制器 - 1.20 (Microsoft)",
+   "class": "USB",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.3",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)#ACPI(XHC4)",
+   "pci_path": "PCIROOT(0)#PCI(0803)#PCI(0004)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDD800000",
+     "0xDD8FFFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD800000",
+     "0xDD8FFFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD800000",
+      "0xDD8FFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFD3 (-45)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  },
+  {
+   "bdf": "67:00.5",
+   "vendor_device": "VEN_1022&DEV_1668&SUBSYS_20AF1043&REV_00",
+   "subsys_rev": "VEN_1022&DEV_1668&SUBSYS_20AF1043&REV_00",
+   "desc": "USB4(TM) 主机路由器 (Microsoft)",
+   "class": "USB",
+   "status": "Started",
+   "problem": "0x00000000",
+   "parent_bdf": "00:08.3",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)#ACPI(NHI0)",
+   "pci_path": "PCIROOT(0)#PCI(0803)#PCI(0005)",
+   "is_bridge": false,
+   "windows_merged": [
+    [
+     "0xDDA00000",
+     "0xDDA7FFFF"
+    ]
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDA00000",
+     "0xDDA7FFFF"
+    ]
+   ],
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDA00000",
+      "0xDDA7FFFF"
+     ],
+     "length": 524288,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "io_merged": [],
+   "irq": [
+    "0xFFFFFFE4 (-28)",
+    "0xFFFFFFE3 (-29)",
+    "0xFFFFFFE2 (-30)",
+    "0xFFFFFFE1 (-31)",
+    "0xFFFFFFE0 (-32)",
+    "0xFFFFFFDF (-33)",
+    "0xFFFFFFDE (-34)",
+    "0xFFFFFFDD (-35)",
+    "0xFFFFFFDC (-36)",
+    "0xFFFFFFDB (-37)",
+    "0xFFFFFFDA (-38)",
+    "0xFFFFFFD9 (-39)",
+    "0xFFFFFFD8 (-40)",
+    "0xFFFFFFD7 (-41)",
+    "0xFFFFFFD6 (-42)",
+    "0xFFFFFFD5 (-43)"
+   ],
+   "instance_id": null,
+   "parent_instance_id": null
+  }
+ ],
+ "bridges": [
+  {
+   "bdf": "00:08.1",
+   "vendor_device": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP17)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": 101,
+   "subordinate_bus_derived": 101,
+   "children": [
+    "65:00.0",
+    "65:00.1",
+    "65:00.2",
+    "65:00.3",
+    "65:00.4",
+    "65:00.5",
+    "65:00.6"
+   ],
+   "no_children": false,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD200000",
+      "0xDD7FFFFF"
+     ],
+     "length": 6291456,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7E10000000",
+      "0x7E207FFFFF"
+     ],
+     "length": 276824064,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD200000",
+     "0xDD7FFFFF"
+    ],
+    [
+     "0x7E10000000",
+     "0x7E207FFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xDD200000",
+     "0xDD7FFFFF"
+    ],
+    [
+     "0x7E10000000",
+     "0x7E207FFFFF"
+    ]
+   ],
+   "io_merged": [
+    [
+     57344,
+     61439
+    ]
+   ]
+  },
+  {
+   "bdf": "00:08.2",
+   "vendor_device": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP18)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": 102,
+   "subordinate_bus_derived": 102,
+   "children": [
+    "66:00.0",
+    "66:00.1"
+   ],
+   "no_children": false,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDD00000",
+      "0xDDDFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7E20900000",
+      "0x7E209FFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDD00000",
+     "0xDDDFFFFF"
+    ],
+    [
+     "0x7E20900000",
+     "0x7E209FFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xDDD00000",
+     "0xDDDFFFFF"
+    ],
+    [
+     "0x7E20900000",
+     "0x7E209FFFFF"
+    ]
+   ],
+   "io_merged": []
+  },
+  {
+   "bdf": "00:08.3",
+   "vendor_device": "VEN_1022&DEV_14EB&SUBSYS_14EB1022&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP19)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": 103,
+   "subordinate_bus_derived": 103,
+   "children": [
+    "67:00.0",
+    "67:00.3",
+    "67:00.4",
+    "67:00.5"
+   ],
+   "no_children": false,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDD800000",
+      "0xDDAFFFFF"
+     ],
+     "length": 3145728,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xDD800000",
+     "0xDDAFFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xDD800000",
+     "0xDDAFFFFF"
+    ]
+   ],
+   "io_merged": []
+  },
+  {
+   "bdf": "00:03.1",
+   "vendor_device": "VEN_1022&DEV_14EF&SUBSYS_14531022&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GP11)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": null,
+   "subordinate_bus_derived": null,
+   "children": [],
+   "no_children": true,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xC4000000",
+      "0xDBFFFFFF"
+     ],
+     "length": 402653184,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x6C00000000",
+      "0x7BFFFFFFFF"
+     ],
+     "length": 68719476736,
+     "prefetchable": true,
+     "large_descriptor": true
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xC4000000",
+     "0xDBFFFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xC4000000",
+     "0xDBFFFFFF"
+    ],
+    [
+     "0x6C00000000",
+     "0x7BFFFFFFFF"
+    ]
+   ],
+   "io_merged": [
+    [
+     40960,
+     57343
+    ]
+   ]
+  },
+  {
+   "bdf": "00:02.1",
+   "vendor_device": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP5)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": 2,
+   "subordinate_bus_derived": 2,
+   "children": [
+    "02:00.0"
+   ],
+   "no_children": false,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDF00000",
+      "0xDDFFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDF00000",
+     "0xDDFFFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xDDF00000",
+     "0xDDFFFFFF"
+    ]
+   ],
+   "io_merged": []
+  },
+  {
+   "bdf": "00:02.2",
+   "vendor_device": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP6)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": 3,
+   "subordinate_bus_derived": 3,
+   "children": [
+    "03:00.0"
+   ],
+   "no_children": false,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDB00000",
+      "0xDDCFFFFF"
+     ],
+     "length": 2097152,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7FFFF00000",
+      "0x7FFFFFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": true,
+     "large_descriptor": false
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDB00000",
+     "0xDDCFFFFF"
+    ],
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xDDB00000",
+     "0xDDCFFFFF"
+    ],
+    [
+     "0x7FFFF00000",
+     "0x7FFFFFFFFF"
+    ]
+   ],
+   "io_merged": []
+  },
+  {
+   "bdf": "00:02.4",
+   "vendor_device": "VEN_1022&DEV_14EE&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP8)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": 4,
+   "subordinate_bus_derived": 4,
+   "children": [
+    "04:00.0"
+   ],
+   "no_children": false,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDDE00000",
+      "0xDDEFFFFF"
+     ],
+     "length": 1048576,
+     "prefetchable": false,
+     "large_descriptor": false
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xDDE00000",
+     "0xDDEFFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xDDE00000",
+     "0xDDEFFFFF"
+    ]
+   ],
+   "io_merged": []
+  },
+  {
+   "bdf": "00:01.1",
+   "vendor_device": "VEN_1022&DEV_14ED&SUBSYS_1E431043&REV_00",
+   "desc": "PCI Express 根端口",
+   "acpi_path": "ACPI(_SB_)#ACPI(PCI0)#ACPI(GPP0)",
+   "primary_bus_reported": 0,
+   "secondary_bus_derived": 1,
+   "subordinate_bus_derived": 1,
+   "children": [
+    "01:00.0",
+    "01:00.1"
+   ],
+   "no_children": false,
+   "windows_cfgmgr": [
+    {
+     "range": [
+      "0xDC000000",
+      "0xDD0FFFFF"
+     ],
+     "length": 17825792,
+     "prefetchable": false,
+     "large_descriptor": false
+    },
+    {
+     "range": [
+      "0x7C00000000",
+      "0x7E01FFFFFF"
+     ],
+     "length": 8623489024,
+     "prefetchable": true,
+     "large_descriptor": true
+    }
+   ],
+   "windows_pnputil": [
+    [
+     "0xDC000000",
+     "0xDD0FFFFF"
+    ]
+   ],
+   "windows_merged": [
+    [
+     "0xDC000000",
+     "0xDD0FFFFF"
+    ],
+    [
+     "0x7C00000000",
+     "0x7E01FFFFFF"
+    ]
+   ],
+   "io_merged": [
+    [
+     61440,
+     65535
+    ]
+   ]
+  }
+ ],
+ "pci_root_bus": {
+  "instance_id": "ACPI\\PNP0A08",
+  "description": "PCI Express 根复合体",
+  "mem": [
+   [
+    "0xA0000",
+    "0xBFFFF"
+   ],
+   [
+    "0xC0000",
+    "0xDFFFF"
+   ],
+   [
+    "0xFA000000",
+    "0xFCFFFFFF"
+   ],
+   [
+    "0xF0000000",
+    "0xF9FFFFFF"
+   ],
+   [
+    "0xA0000000",
+    "0xDFFFFFFF"
+   ]
+  ],
+  "io": [
+   [
+    "0x0",
+    "0x3AF"
+   ],
+   [
+    "0x3E0",
+    "0xCF7"
+   ],
+   [
+    "0x3B0",
+    "0x3DF"
+   ],
+   [
+    "0xD00",
+    "0xFFFF"
+   ]
+  ]
+ },
+ "source_comparison": [
+  {
+   "bdf": "00:01.1",
+   "only_in_cfgmgr": [
+    [
+     "0x7C00000000",
+     "0x7E01FFFFFF"
+    ]
+   ],
+   "only_in_pnputil": []
+  },
+  {
+   "bdf": "00:03.1",
+   "only_in_cfgmgr": [
+    [
+     "0x6C00000000",
+     "0x7BFFFFFFFF"
+    ]
+   ],
+   "only_in_pnputil": []
+  },
+  {
+   "bdf": "01:00.0",
+   "only_in_cfgmgr": [
+    [
+     "0x7C00000000",
+     "0x7DFFFFFFFF"
+    ]
+   ],
+   "only_in_pnputil": []
+  }
+ ],
+ "memory_large_hypothesis": {
+  "statement": "pnputil /resources omits every CmResourceTypeMemoryLarge descriptor, i.e. every window whose length does not fit 32 bits (>= 4 GiB)",
+  "threshold_bytes": 4294967296,
+  "windows_only_in_cfgmgr": 3,
+  "all_only_in_cfgmgr_are_over_threshold": true,
+  "min_length_only_in_cfgmgr": 8589934592,
+  "windows_only_in_pnputil": 0,
+  "verdict": "consistent with the statement"
+ },
+ "containment_violations": [],
+ "windows_outside_declared": [],
+ "buses_observed": [
+  "0x00",
+  "0x01",
+  "0x02",
+  "0x03",
+  "0x04",
+  "0x65",
+  "0x66",
+  "0x67"
+ ],
+ "buses_above_legal_max": [],
+ "overlaps": [
+  {
+   "a": "01:00.0",
+   "b": "00:01.1",
+   "range": [
+    "0xDC000000",
+    "0xDCFFFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:01.1",
+   "b": "01:00.1",
+   "range": [
+    "0xDD0FC000",
+    "0xDD0FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "65:00.0",
+   "b": "00:08.1",
+   "range": [
+    "0xDD200000",
+    "0xDD3FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.4",
+   "range": [
+    "0xDD400000",
+    "0xDD4FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.3",
+   "range": [
+    "0xDD500000",
+    "0xDD5FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.2",
+   "range": [
+    "0xDD600000",
+    "0xDD6FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.0",
+   "range": [
+    "0xDD700000",
+    "0xDD77FFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.5",
+   "range": [
+    "0xDD780000",
+    "0xDD7BFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.6",
+   "range": [
+    "0xDD7C0000",
+    "0xDD7C7FFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.1",
+   "range": [
+    "0xDD7F8000",
+    "0xDD7FBFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.2",
+   "range": [
+    "0xDD7FE000",
+    "0xDD7FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "67:00.4",
+   "b": "00:08.3",
+   "range": [
+    "0xDD800000",
+    "0xDD8FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.3",
+   "b": "67:00.3",
+   "range": [
+    "0xDD900000",
+    "0xDD9FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.3",
+   "b": "67:00.5",
+   "range": [
+    "0xDDA00000",
+    "0xDDA7FFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:02.2",
+   "b": "03:00.0",
+   "range": [
+    "0xDDCF8000",
+    "0xDDCFFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.2",
+   "b": "66:00.1",
+   "range": [
+    "0xDDD3E000",
+    "0xDDD3FFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.2",
+   "b": "66:00.1",
+   "range": [
+    "0xDDD40000",
+    "0xDDD7FFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.2",
+   "b": "66:00.1",
+   "range": [
+    "0xDDD80000",
+    "0xDDDFFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "04:00.0",
+   "b": "00:02.4",
+   "range": [
+    "0xDDE00000",
+    "0xDDE03FFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:02.1",
+   "b": "02:00.0",
+   "range": [
+    "0xDDFFF000",
+    "0xDDFFFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "01:00.0",
+   "b": "00:01.1",
+   "range": [
+    "0x7C00000000",
+    "0x7DFFFFFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:01.1",
+   "b": "01:00.0",
+   "range": [
+    "0x7E00000000",
+    "0x7E01FFFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "65:00.0",
+   "b": "00:08.1",
+   "range": [
+    "0x7E10000000",
+    "0x7E1FFFFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.1",
+   "b": "65:00.5",
+   "range": [
+    "0x7E20000000",
+    "0x7E207FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:08.2",
+   "b": "66:00.1",
+   "range": [
+    "0x7E209C0000",
+    "0x7E209FFFFF"
+   ],
+   "containment": true
+  },
+  {
+   "a": "00:02.2",
+   "b": "03:00.0",
+   "range": [
+    "0x7FFFF00000",
+    "0x7FFFFFFFFF"
+   ],
+   "containment": true
+  }
+ ],
+ "partial_overlaps": [],
+ "declared_limits": {
+  "bus_min": "0x0",
+  "bus_len_declared": "0x100",
+  "bus_max_declared": "0xFF",
+  "bus_max_legal": "0xFF",
+  "note": "DSDT \\_SB.PCI0._CRS patches the WordBusNumber template _Y01: _MIN = BRB = 0x0000, _LEN = BRL = 0x0100, _MAX = _MIN + Local0-- where Local0 is a *copy* of _LEN. The decrement therefore never touches _LEN, which stays 0x0100. A bus-number descriptor must satisfy _LEN = _MAX - _MIN + 1, so _MAX = 0xFF and the range is 0x00-0xFF (256 buses). Reading BRL as if it were the maximum - '0x00-0x100' - is a mistake: 0x100 is not a legal bus number. The static template (_MIN 0, _MAX 0x7F, _LEN 0x80) is dead code, because both _CRS branches patch the descriptor before returning it.",
+  "w32": [
+   "0xA0000000",
+   "0xDFFFFFFF"
+  ],
+  "w64": [
+   "0x460000000",
+   "0x7FFFFFFFFF"
+  ],
+  "ecam": [
+   "0xE0000000",
+   "0xEFFFFFFF"
+  ]
+ },
+ "gaps": [
+  {
+   "field": "PCI-to-PCI bridge Primary / Secondary / Subordinate Bus Number registers (config space 0x18/0x19/0x1A)",
+   "available": false,
+   "attempted": [
+    "DEVPKEY_Device_DeviceNumber / DEVPKEY_Device_FunctionNumber: DO NOT EXIST on this build - the full per-device property inventory contains DEVPKEY_Device_BusNumber and DEVPKEY_Device_Address only (see prop_keys).",
+    "CfgMgr32 CM_Get_First_Log_Conf(ALLOC_LOG_CONF) then CM_Get_Next_Res_Des: CM_Get_First_Res_Des is NOT exported by cfgmgr32.dll on this Windows build (string-scanned every DLL in System32: 0 hits), and calling CM_Get_Next_Res_Des with a NULL current handle returns CR_INVALID_FLAG (4)."
+   ],
+   "proxy": "primary = the bridge's own DEVPKEY_Device_BusNumber (reported); secondary and subordinate are DERIVED from the buses of the functions Windows enumerated underneath the bridge.",
+   "consequence": "a derived range cannot distinguish 'bridge claims a wider bus range than it uses' from 'bridge claims exactly what it uses'; a childless bridge yields unknown, not empty. The question 'do two bridges claim overlapping bus ranges?' CANNOT be answered from Windows data."
+  },
+  {
+   "field": "bridge Memory Base/Limit and Prefetchable Memory Base/Limit registers",
+   "available": "proxy only",
+   "attempted": [
+    "raw configuration space is not exposed by any Windows user-mode API."
+   ],
+   "proxy": "the CfgMgr32 ALLOC_LOG_CONF window records (base, end, flags) which pci.sys built from those registers, incl. CM_RESOURCE_MEMORY_PREFETCHABLE (0x04).",
+   "consequence": "this is a decoded record, not a register read: a window that the firmware never assigned cannot be reconstructed from it, and the register's alignment/granularity bits are invisible."
+  },
+  {
+   "field": "PCI Command (0x04) / Status (0x06) registers",
+   "available": false,
+   "attempted": [
+    "not exposed as a device property."
+   ],
+   "proxy": "DEVPKEY_PciDevice_* capability bits only (AcsSupport, AriSupport, AtsSupport, BarTypes, DeviceType, ExpressSpecVersion, ...), all captured."
+  },
+  {
+   "field": "individual BAR registers with index and size encoding",
+   "available": "proxy only",
+   "attempted": [
+    "not exposed."
+   ],
+   "proxy": "resource ranges give base+length; DEVPKEY_PciDevice_BarTypes gives the per-BAR type flags. The BAR *index* is not given."
+  },
+  {
+   "field": "the bridge's REQUIRED (unassigned) window, i.e. what it would request on a clean re-enumeration",
+   "available": false,
+   "attempted": [
+    "Windows reports what it assigned or accepted, not the requirement list; CM_Get_First_Res_Des - the requirement-side call - is unavailable here."
+   ],
+   "proxy": null
+  },
+  {
+   "field": "an undocumented Binary device property on 33 devices, GUID {f0e20f09-d97a-49a9-8046-bb6e22e6bb2e}[2]",
+   "available": false,
+   "attempted": [
+    "dumped as bytes for every device that carries it (96 / 184 / 360 / 1504 B).",
+    "it DOES carry the device's interrupt pseudo-vector (offset 64 = 0xFFFFFFFE for GPP0 = -2, matching its CfgMgr32 irq record) and 0xFEE00000 (Local APIC).",
+    "it does NOT carry the bridge 64-bit windows: 0x7C00000000, 0x7E01FFFFFF, 0x6C00000000 and 0x7BFFFFFFFF appear nowhere in the whole dump, in text or in the byte blobs."
+   ],
+   "proxy": null,
+   "consequence": "unidentified, therefore NOT used as evidence anywhere in this document."
+  },
+  {
+   "field": "macOS's own PCI resource assignment",
+   "available": false,
+   "attempted": [
+    "not observable: this machine's macOS never reaches a userland in which it could be read (docs/06 section 7)."
+   ],
+   "proxy": null
+  }
+ ],
+ "prop_keys": {
+  "DEVPKEY_Device_Address": 42,
+  "DEVPKEY_Device_BaseContainerId": 42,
+  "DEVPKEY_Device_BiosDeviceName": 27,
+  "DEVPKEY_Device_BusNumber": 42,
+  "DEVPKEY_Device_BusRelations": 22,
+  "DEVPKEY_Device_BusReportedDeviceDesc": 42,
+  "DEVPKEY_Device_BusTypeGuid": 42,
+  "DEVPKEY_Device_Capabilities": 42,
+  "DEVPKEY_Device_Children": 22,
+  "DEVPKEY_Device_Class": 42,
+  "DEVPKEY_Device_ClassGuid": 42,
+  "DEVPKEY_Device_CompatibleIds": 42,
+  "DEVPKEY_Device_ConfigFlags": 42,
+  "DEVPKEY_Device_ConfigurationId": 41,
+  "DEVPKEY_Device_ContainerId": 42,
+  "DEVPKEY_Device_DebuggerSafe": 4,
+  "DEVPKEY_Device_DependencyProviders": 1,
+  "DEVPKEY_Device_DevNodeStatus": 42,
+  "DEVPKEY_Device_DevType": 1,
+  "DEVPKEY_Device_DeviceDesc": 42,
+  "DEVPKEY_Device_Driver": 42,
+  "DEVPKEY_Device_DriverDate": 42,
+  "DEVPKEY_Device_DriverDesc": 42,
+  "DEVPKEY_Device_DriverInfPath": 42,
+  "DEVPKEY_Device_DriverInfSection": 42,
+  "DEVPKEY_Device_DriverProvider": 42,
+  "DEVPKEY_Device_DriverRank": 42,
+  "DEVPKEY_Device_DriverVersion": 42,
+  "DEVPKEY_Device_EjectionRelations": 37,
+  "DEVPKEY_Device_EnumeratorName": 42,
+  "DEVPKEY_Device_ExtendedConfigurationIds": 3,
+  "DEVPKEY_Device_FirstInstallDate": 42,
+  "DEVPKEY_Device_FriendlyName": 5,
+  "DEVPKEY_Device_GenericDriverInstalled": 2,
+  "DEVPKEY_Device_HardwareIds": 42,
+  "DEVPKEY_Device_HasProblem": 42,
+  "DEVPKEY_Device_InLocalMachineContainer": 42,
+  "DEVPKEY_Device_InstallDate": 42,
+  "DEVPKEY_Device_InstallState": 42,
+  "DEVPKEY_Device_InstanceId": 42,
+  "DEVPKEY_Device_IsPresent": 42,
+  "DEVPKEY_Device_IsRebootRequired": 42,
+  "DEVPKEY_Device_LastArrivalDate": 42,
+  "DEVPKEY_Device_LegacyBusType": 42,
+  "DEVPKEY_Device_LocationInfo": 42,
+  "DEVPKEY_Device_LocationPaths": 42,
+  "DEVPKEY_Device_Manufacturer": 42,
+  "DEVPKEY_Device_MatchingDeviceId": 42,
+  "DEVPKEY_Device_PDOName": 42,
+  "DEVPKEY_Device_Parent": 42,
+  "DEVPKEY_Device_PowerData": 42,
+  "DEVPKEY_Device_ProblemCode": 42,
+  "DEVPKEY_Device_RemovalPolicy": 42,
+  "DEVPKEY_Device_RemovalPolicyDefault": 42,
+  "DEVPKEY_Device_ReportedDeviceIdsHash": 42,
+  "DEVPKEY_Device_SafeRemovalRequired": 42,
+  "DEVPKEY_Device_Security": 1,
+  "DEVPKEY_Device_Service": 25,
+  "DEVPKEY_Device_Siblings": 39,
+  "DEVPKEY_Device_Stack": 42,
+  "DEVPKEY_Device_UINumberDescFormat": 8,
+  "DEVPKEY_Device_UpperFilters": 1,
+  "DEVPKEY_NAME": 42,
+  "DEVPKEY_PciDevice_AERCapabilityPresent": 26,
+  "DEVPKEY_PciDevice_AcsCapabilityRegister": 26,
+  "DEVPKEY_PciDevice_AcsCompatibleUpHierarchy": 26,
+  "DEVPKEY_PciDevice_AcsSupport": 26,
+  "DEVPKEY_PciDevice_AriSupport": 26,
+  "DEVPKEY_PciDevice_AtomicsSupported": 18,
+  "DEVPKEY_PciDevice_AtsSupport": 26,
+  "DEVPKEY_PciDevice_BarTypes": 20,
+  "DEVPKEY_PciDevice_BaseClass": 28,
+  "DEVPKEY_PciDevice_Correctable_Error_Mask": 26,
+  "DEVPKEY_PciDevice_CurrentLinkSpeed": 18,
+  "DEVPKEY_PciDevice_CurrentLinkWidth": 18,
+  "DEVPKEY_PciDevice_CurrentPayloadSize": 18,
+  "DEVPKEY_PciDevice_CurrentSpeedAndMode": 2,
+  "DEVPKEY_PciDevice_D3ColdSupport": 20,
+  "DEVPKEY_PciDevice_DeviceType": 28,
+  "DEVPKEY_PciDevice_ECRC_Errors": 26,
+  "DEVPKEY_PciDevice_Error_Reporting": 26,
+  "DEVPKEY_PciDevice_ExpressSpecVersion": 26,
+  "DEVPKEY_PciDevice_FirmwareErrorHandling": 26,
+  "DEVPKEY_PciDevice_InterruptMessageMaximum": 17,
+  "DEVPKEY_PciDevice_InterruptSupport": 17,
+  "DEVPKEY_PciDevice_IsTunneledDevice": 18,
+  "DEVPKEY_PciDevice_MaxLinkSpeed": 18,
+  "DEVPKEY_PciDevice_MaxLinkWidth": 18,
+  "DEVPKEY_PciDevice_MaxPayloadSize": 18,
+  "DEVPKEY_PciDevice_MaxReadRequestSize": 18,
+  "DEVPKEY_PciDevice_OnPostPath": 3,
+  "DEVPKEY_PciDevice_ProgIf": 28,
+  "DEVPKEY_PciDevice_RequiresReservedMemoryRegion": 28,
+  "DEVPKEY_PciDevice_RootError_Reporting": 8,
+  "DEVPKEY_PciDevice_S0WakeupSupported": 20,
+  "DEVPKEY_PciDevice_SerialNumber": 1,
+  "DEVPKEY_PciDevice_SubClass": 28,
+  "DEVPKEY_PciDevice_SupportedLinkSubState": 28,
+  "DEVPKEY_PciDevice_SupportsDmwrOnEntireDeviceTree": 18,
+  "DEVPKEY_PciDevice_Uncorrectable_Error_Mask": 26,
+  "DEVPKEY_PciDevice_Uncorrectable_Error_Severity": 26,
+  "DEVPKEY_PciDevice_UsbComponentRelation": 26,
+  "DEVPKEY_PciDevice_VirtualChannelControlRegisters": 1,
+  "{3464f7a4-2444-40b1-980a-e0903cb6d912}[10]": 42,
+  "{5d274563-08ec-4bf0-ad31-d0a6f6e0b2d2}[2]": 1,
+  "{5df7e321-1c1b-4ce2-b4fa-55f4a5bc2cb6}[3]": 1,
+  "{5df7e321-1c1b-4ce2-b4fa-55f4a5bc2cb6}[4]": 1,
+  "{5df7e321-1c1b-4ce2-b4fa-55f4a5bc2cb6}[6]": 1,
+  "{60b193cb-5276-4d0f-96fc-f173abad3ec6}[2]": 3,
+  "{60b193cb-5276-4d0f-96fc-f173abad3ec6}[3]": 3,
+  "{80497100-8c73-48b9-aad9-ce387e19c56e}[6]": 42,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[10]": 42,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[15]": 42,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[18]": 14,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[22]": 1,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[25]": 39,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[26]": 39,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[3]": 42,
+  "{83da6326-97a6-4088-9453-a1923f573b29}[4]": 3,
+  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[16]": 10,
+  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[20]": 3,
+  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[23]": 1,
+  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[24]": 1,
+  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[26]": 42,
+  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[31]": 1,
+  "{a8b865dd-2e3d-4094-ad97-e593a70c75d6}[33]": 2,
+  "{f06d20bc-24e5-4773-93d7-8b1514fbc9a5}[0]": 3,
+  "{f06d20bc-24e5-4773-93d7-8b1514fbc9a5}[1]": 3,
+  "{f0e20f09-d97a-49a9-8046-bb6e22e6bb2e}[2]": 24
+ },
+ "device_number_property_present": false,
+ "function_number_property_present": false,
+ "bdf_source_disagreements": []
+}

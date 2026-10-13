@@ -441,25 +441,43 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > **但那些轮次没有各自的写后读回** ⇒ **不能**声称"当时 XNU 一定用了 64 MiB BAR1"，
 > 更不能把「Apple 交接阶段的尺寸」等同于「XNU PCI 枚举阶段的最终尺寸」
 > ⇒ **BAR 轴嫌疑下降，但未被排除**；
-> ④ **屏幕仍停在** `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`
-> （照片 `IMG20261013214007.jpg`）⇒ **Recovery 尚未进入**；**完整停留时长待操作者确认**；
+> ④ **屏幕仍停在** `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`。
+> **实机操作者已确认：在该停点后连续等待 >10 分钟，没有任何新的屏幕输出，也没有进入 Recovery。**
 > ⑤ **GOP 风险本次未触发**（引导正常到达 Apple 路径并跑到 `EXITBS`）—— 只说明"本次未触发"，**不等于无风险**。
 >
-> **Round 7 记录**：「BAR 读回实验成功；Recovery 尚未进入；完整停留时长待操作者确认」。
+> **✅ Round 7 正式结案**：**「BAR 双阶段读回成功，macOS Recovery 启动失败，已确认 ≥10 分钟无新输出。」**
+> 两阶段证据（`13→6`、`6→6`）与 **XNU 最终 PCI 资源仍不可观测**这一限制均保留。
 > **⛔ 原"Round 8 候选 B（只改 `ResizeAppleGpuBars: 0 → -1`）"已判定为设计无效** ——
 > Round 7 已把 `UEFI.ResizeGpuBars` 设为 `0`，阶段 A 会先在 UEFI 早期缩容，
 > 只改 Booter 项**不会**把 BAR1 恢复成 8 GiB。若将来要测 8 GiB，必须以 **Round 4 为基线**
 > （`UEFI.ResizeGpuBars=-1` **且** `Booter.ResizeAppleGpuBars=-1`，只差 Booter 一项）——
 > 但该实验已**按指示降级**。
 >
-> **下一轮方向（暂不批准写盘）：先做 PCI 桥资源 / 固件 ACPI·IRQ / 设备枚举的只读审计。**
-> `docs/08` §10 已用现有产物给出四条**排除性**结论（所有窗口都在 ACPI 声明范围内、
-> **部分重叠 = 0**、总线号 0/1/2/3/4/101/102/103 全在声明范围内、32 位窗口仅用 43%）
-> 与四条**待追线索**（`GP11` 于 `0/3/1` 持 384 MiB+64 GiB 窗口却**无端点**；
-> DSDT 64 位窗口**基址** `0x460000000` 同时是固件运行期 MMIO 保留区；
-> WiFi 的 64 位 BAR 恰好**顶满**窗口上沿 `MAM`；32 位窗口上沿被 ECAM 顶死）。
-> 缺口是**桥的寄存器级窗口/总线号**（只存在于配置空间）⇒ Round 8 首选即**补全这份只读数据**。
-> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §10 与 [docs/05](docs/05-受控实验记录.md) §7.20。
+> **✅ Round 8 已执行（纯只读，零 EFI 改动）** —— Windows 侧 PCI 拓扑与资源采集，
+> 完整结果见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §11、脚本与脱敏输出见 [`audit/`](audit/README.md)：
+> * **最重要的一条（方法论）**：`pnputil /resources` **会静默丢掉所有 ≥4 GiB 的窗口**
+>   （`CmResourceTypeMemoryLarge`）。本机恰好是这些大窗口最要紧 ——
+>   被丢掉的 3 条正是 **dGPU BAR1（8 GiB）**、**GPP0 的 8 GiB+32 MiB 窗口**、**GP11 的 64 GiB 窗口**。
+>   ⇒ 单独用 `pnputil` 做"无重叠"结论**不成立**；必须与 CfgMgr32 的
+>   `ALLOC_LOG_CONF` 记录（`1401/plan.json`）**合并**后再判。
+> * **拓扑**：42 个 PCI 功能、**8 座 PCI-to-PCI 桥**，每座都拿到了 **PCI 路径 + ACPI 路径**；
+>   `DEVPKEY_Device_DeviceNumber/FunctionNumber` **在本机不存在**，改用
+>   `BusNumber`/`Address`/`LocationPaths`/`LocationInfo` **四源交叉核对 BDF，不一致 = 0**。
+> * **预登记判据全部落在 (β)**：合并窗口集上，子窗口不被父桥包含 **0 例**、
+>   越出 ACPI 声明窗口 **0 例**、**部分重叠 0**、总线最大 `0x67`（**超 `0xFF` 的 0 个**）。
+> * **登记缺口（不猜）**：桥的 `Primary/Secondary/Subordinate` 与
+>   `Memory/Prefetchable Base·Limit` **寄存器**在 Windows 用户态**取不到**
+>   （`CM_Get_First_Res_Des` 本机 DLL 未导出；传 `NULL` 返回 `CR_INVALID_FLAG(4)`），
+>   只能**派生**次级总线号，且无子设备的桥 = **未知**。
+> * **GP11 仍是线索而非异常**：三种解读（空槽预留／固件过分配／真异常）**本轮无法判定**，
+>   **不据此提议任何 SSDT**；区分它们需要 Linux Live 的 `Slot` + `LnkSta` + 次级总线号。
+> * 对早期 "`0x00–0x100` 总线范围" 与四条"排除性结论"的**过度推断已逐条勘误**（docs/08 §10.5）。
+>
+> **下一轮（未批准写盘）**：若要判定 GP11 的三种解读，执行
+> [Linux Live 只读采集预案](docs/09-Linux-Live只读采集方案.md)
+> （从**固件启动菜单**直接引导，**不经过 OpenCore**，禁止 `setpci` 写/复位/解绑/重分配）。
+> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §10 / §11 与
+> [docs/05](docs/05-受控实验记录.md) §7.20。
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
@@ -548,7 +566,9 @@ docs/04-驱动核对.md               kext 逐个审计（版本/架构/顺序/�
 docs/05-受控实验记录.md            ★ 当前在测什么：实验设计、精确 diff、判据、回滚
 docs/06-只读分析与Round5候选.md    ★ 只读 ACPI/PCI 分析、上游案例复核、Round 5 候选（只给 diff）
 docs/07-上游案例复核与Round6候选.md ★ Round 5B 结案与回滚、Acer 案例复核、IOPCIFamily-681 标志位、1401 版本策略对比、Round 6 候选
-docs/08-RTX4050-BAR与PCI资源审计.md  ★ RTX 4050 BAR1 专项（BDF/地址/尺寸/RBAR 解码/读回手段）、PCI root bridge 与 _CRS 审计、Round 7 候选
+docs/08-RTX4050-BAR与PCI资源审计.md  ★ RTX 4050 BAR1 专项（BDF/地址/尺寸/RBAR 解码/读回手段）、PCI root bridge 与 _CRS 审计、Round 7 定稿、Round 8 Windows 侧 PCI 拓扑与资源只读审计
+docs/09-Linux-Live只读采集方案.md   ★ Linux Live 只读采集预案（桥寄存器级证据；按条件执行，本轮未执行）
+audit/                           只读审计脚本 + 脱敏结果（什么入库/什么绝不入库见 audit/README.md）
 hardware/本机配置摘要.md           脱敏后的硬件清单
 efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
 efi/README.md                    kext 清单与用 1401 重建的方法
