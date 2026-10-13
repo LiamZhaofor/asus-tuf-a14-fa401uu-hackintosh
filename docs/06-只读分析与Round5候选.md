@@ -6,7 +6,9 @@
 > **本轮没有改任何东西**：U 盘、BIOS、Windows EFI、分区、`config.plist` 全部未动。
 > 唯一新增的写入是**本仓库的文档与日志**（见 §6）。
 
-> **初版勘误（同一次作业内自查更正，留档）**
+> **初版勘误（两次自查更正，留档）**
+>
+> **第一批（同一次只读作业内更正）**
 >
 > 1. `_CRS` 的第二个 32-bit 窗口：初版写成 `0xFEE00000 + 0x1200000 = 0xFEE00000–0xFEF1FFFF`。
 >    **算术与控制流都错**（`+0x1200000` 会进位到 `0x1_0000_0000`；且 `NBTP=0xFEC00000` 使
@@ -17,6 +19,21 @@
 >    `EFI memory map` 里 `Type==EfiMemoryMappedIO && EFI_MEMORY_RUNTIME` 的描述符
 >    （`ServiceOverrides.master.c:281-310`），ACPI 只能解释。已按 §2.5 重写。
 > 4. ACPI 错误串 `[_SBW]` → **`[_S0W]`**（见 §2.4）。
+>
+> **第二批（Round 4 定稿 + 日志可观测性审计时更正）**
+>
+> 5. **连续区间写成 #1+#3，漏了中间的 #2（4 KiB LAPIC 描述符）** ——
+>    正确表述是 **#1 + #2 + #3** 三个描述符地址连续、构成 `0xFD000000–0xFFFFFFFF` 的 48 MiB。见 §2.5。
+> 6. **越界推导**：初版把"#1/#4 在 ACPI 文本里无主人"当成 `MmioWhitelist` 的着力点。
+>    **`MmioWhitelist` 只能依据固件运行期访问需求判断，ACPI 文本搜索不构成依据。** 见 §2.5 反面约束。
+> 7. **候选 A 的整个前提是错的**：初版引用 `pci_log`/`pci_log_mode` 时，用的源码实为
+>    **`IOPCIFamily-726.0.5`（macOS 26 时代）**，而实机跑的是 **macOS 15.6 / Darwin 24.6.0**。
+>    上游证据（§7.1）表明 `pci_log_mode` **只存在于 726.x 系列**，
+>    所有 15.x 时代的 tag 都没有它。⇒ **候选 A 在实机上是空操作，必须撤销。** 见 §7。
+> 8. **Round 3 的改写过头**：初版把 Round 3 的 `RTC:` 停留解释为"观察窗口不足"。
+>    实机操作者**明确确认过停留 ≥10 分钟**，该事实必须保留；正确表述见 §1.3。
+> 9. **MAT/npci 的推论过头**：初版暗示"对内核行为无影响"。两轮**屏幕最后可见行相同**，
+>    但**不能证明 `doConfigure()` 内部停在同一点**，因此只能说"不足以进入 Recovery"。见 §1.2。
 
 ---
 
@@ -51,23 +68,35 @@
 | **Round 2**（`020808`，照片 `IMG20261013020953.jpg`） | **有**（实测 `MBA:OUT` 含 `npci=0x2000 slide=244`） | `1 / 0 / 0` | `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0` |
 | **Round 4**（`095517`） | **无** | `0 / 1 / 1` | **完全相同** |
 
-**这是本机第一次出现"同一停点、两个变量都无影响"的对照。** 由此可确认：
+**这是本机第一次出现"两次引导的最后可见行相同、而两个变量都不同"的对照。** 可以确认：
 
-1. 在**这个**停点上，`npci=0x2000` **不足**（它当时确实进了内核并出现在 `MBA:OUT` 里）；
-2. 在**这个**停点上，MAT 三件套（`WRUNPROT=0/RBMAP=1/RTPERMS=1`）**也没有移动停点**。
+1. 在**这个**停点上，`npci=0x2000` **不足以**让系统进入 Recovery（它当时确实进了内核并出现在 `MBA:OUT` 里）；
+2. 在**这个**停点上，MAT 三件套（`WRUNPROT=0/RBMAP=1/RTPERMS=1）**同样不足以**让系统进入 Recovery。
 
-> 措辞约束：这两条**只**说明"该变量在此停点不足以解决问题"，**不能**排除它们的其它作用，
-> 也**不能**据此锁定任何子系统。与 §7.6 B 的口径一致。
+> **措辞约束（本轮收紧）**：
+> * 两轮**屏幕最后可见行相同**，但 §1.4 已说明该窗口内屏幕被关闭 ——
+>   因此**不能证明两轮在 `doConfigure()` 内部停在同一个位置**，也**不能证明**停在同一台 PCI 设备。
+> * 所以只能说"现有 `npci`/MAT 调整**都不足以**让系统进入 Recovery"。
+>   **不能**断言它们对 PCI 资源分配或内核行为**完全无影响**。
 
-### 1.3 对 Round 3 "在 `RTC:` 停留 ≥10 分钟" 的修正
+### 1.3 Round 3 的真实观测**必须保留**（本轮勘误）
+
+实机操作者已明确确认：**Round 3 在 `RTC: Only single RAM bank (128 bytes)` 处连续等待至少 10 分钟，
+屏幕没有新的输出。** 这条事实**成立，不改写**。
+
+同时成立的事实：
 
 - Round 2 的照片证明：**同一次启动里 `RTC: Only single RAM bank (128 bytes)` 之后还有大量输出**
-  （`AppleCredentialManager`、`AppleKeyStore`、`AppleSSE`、`CoreAnalyticsHub`、5×`AppleVTD addMemoryRange`
-  ……直到 `PCI configuration begin`）。
-- Round 4（**无** `npci`）已经走到了 `PCI configuration begin`。
-- ⇒ Round 3 与 Round 2 的唯一差异是移除 `npci`，而 Round 4 在**同样没有 `npci`** 的情况下越过了 `RTC:`。
-  **"移除 npci 使其停在 RTC" 被 Round 4 证伪**；Round 3 的 `RTC:` 停留最可能是**观察窗口不足**
-  （该行之后有一段长静默），而非独立的死锁点。
+  （`AppleCredentialManager`、`AppleKeyStore`、`AppleSSE`、`CoreAnalyticsHub`、`AppleVTD addMemoryRange`
+  ……一直到 `PCI configuration begin`）。
+- Round 4（**同样没有 `npci`**）也出现了后续 PCI 日志。
+
+**更准确的结论（取代本文件初版的"观察窗口不足"）**：
+
+* Round 3 当次引导**未成功，最后停在 `RTC:`**；
+* Round 4 在**同样没有 `npci`** 的情况下**出现了后续 PCI 日志**；
+* ⇒ **不同轮次的执行结果存在差异，目前尚不能解释原因。** 只能确定"`RTC:` 停留**不一定**是稳定复现的
+  独立根因"，**不能**把它改写成"当时观察时间不足"，也**不能**据此断定 `RTC:` 无害。
 
 ### 1.4 屏幕停点的**结构性**解释 —— 为什么四轮最后一行都长这样
 
@@ -91,39 +120,61 @@
 3388:     if (bootConfig) IOLog("[ PCI configuration end, bridges %d, devices %d ]\n", fBridgeCount, fDeviceCount);
 ```
 
-结论：
+结论（**注意区分已证与未证**）：
 
 * `[ PCI configuration begin ]` 与 `[IOPCIConfigurator::configure()] PCI configuration PCI0` 是
-  **`doConfigure()` 之前**打印的最后两行；之后 PE 屏幕被**主动关闭**，`doConfigure()` 期间的任何
-  `IOLog` 都**不会上屏**（真机上也一样，所以正常机器上这两行与 `PCI configuration end` 是紧挨着的）。
-* 因此 **"屏幕停在这两行" 等价于 "`doConfigure()` 没有返回"**，而不是"停在第 3321 行的某条指令"。
-  `doConfigure()` 内部是四遍 `iterate`：
-  ```cpp
-  3210: if (bootConfig) iterate("boot reset", &CLASS::scanProc, &CLASS::bootResetProc, this);
-  3211:                iterate("scan total", &CLASS::scanProc, &CLASS::totalProc, NULL);
-  3212:                iterate("allocate",   &CLASS::allocateProc, NULL, NULL);
-  3213:                iterate("finalize",   &CLASS::bridgeFinalizeConfigProc, &CLASS::domainFinalizeConfigProc, NULL);
+  **`doConfigure()` 之前**打印的最后两行 —— 这一点是**源码已证**（`:3310`、`:3321` 在 `:3342` 之前）。
+* `:3342` 会调用 `setConsoleInfo(0, kPEDisableScreen)`，`:3377` 才重新开启 —— 这一点也是**源码已证**。
+* **"`kPEDisableScreen` 之后 `IOLog`/`kprintf` 一定不上屏" 是 INFERENCE，不是已证事实**；
+  `kPEDisableScreen` 的确切语义本轮**未能从可核实的源码中确认**（见 §7.2）。
+  经验旁证：真机上这两行与 `PCI configuration end` 通常紧挨着，与本机现象一致。
+* **由此得到的唯一严格结论**：`[ PCI configuration end, bridges N, devices M ]`（`:3388`）
+  是在屏幕**重新开启之后**打印的，所以"**≥10 分钟没有出现 `PCI configuration end`**"
+  ⇒ **`configure()` 没有走到 `:3388`**。
+* **不能从中推出**：停在四遍 `iterate` 中的哪一遍、停在哪台设备、是死锁还是无限循环，
+  以及 `doConfigure()` 内部是否仍在推进。**只凭屏幕无法区分这些。**
+* 本机实际观测（实机操作者确认）：**Round 4 在下面两行连续停留 >10 分钟、屏幕无新输出、未进入 Recovery**：
+  ```text
+  [ PCI configuration begin ]
+  [IOPCIConfigurator::configure()] PCI configuration PCI0
   ```
-* **只凭屏幕无法知道挂在四遍中的哪一遍、也不知道挂在哪个设备上** —— 这正是第四阶段候选 A 要解决的问题。
-* 判定 `doConfigure()` 确实没有返回，仍需**停留时长**：`PCI configuration end` 那一行会在屏幕重新开启
-  **之后**打印，所以"等了 N 分钟没有出现 `PCI configuration end`"就是死锁的直接证据。
-  **Round 4 没有停留时长证据 → 本节结论按"待补时长"处理，本文件不代填。**
+  ⇒ 按上一条严格结论：**`configure()` 未返回**。
 
-### 1.5 照片状态（**必须如实说明**）
+> **这条观测不能做的事**（本轮明确写死）：不能据此定位到具体 PCI 设备；
+> 不能证明 `doConfigure()` 内部发生了死锁（可能是极慢的枚举或无限循环）；
+> 也不能用来比较两轮"内部停点是否相同"。要缩小范围必须先解决 §7 的可观测性问题。
 
-* **Round 4 的屏幕照片不在本机、也不在本会话中。** 已检索
+### 1.5 照片与停留时长状态（**如实登记**）
+
+* **停留时长：已由实机操作者确认 —— Round 4 在 `[ PCI configuration begin ]` /
+  `[IOPCIConfigurator::configure()] PCI configuration PCI0` 处连续停留 >10 分钟，
+  屏幕无新输出、未进入 macOS Recovery。** 本节不再按"待补"处理。
+* **Round 4 的屏幕照片文件仍不在本机、也不在本会话中。** 已检索
   `Downloads / Pictures / Desktop / Documents / %TEMP% / %APPDATA% / .dsh\attachments`，
   09:00 之后**没有任何**新增图片文件；`.dsh\attachments` 里只有本次分析自己生成的裁切图。
-* 因此 Round 4 的屏幕内容在本文件中**只记为"用户口述"**，不作为照片证据：
-  > 口述（原话大意）：同一次启动先出现 `RTC: Only single RAM bank (128 bytes)`，继续出现
-  > `AppleCredentialManager`、`AppleKeyStore`、`CoreAnalyticsHub` 等，最后停在
-  > `PCI configuration begin` / `IOPCIConfigurator::configure() PCI configuration PCI0`。
+* 因此上面那段屏幕内容在本文件中记录为**实机操作者的确认陈述**（时长已确认），
+  **不作为可复核的照片证据**；照片若日后提供，建议按 `scripts/scrub-log.py` 的同一标准过一遍
+  再考虑留档（本项目**不把屏幕照片入库**）。
+* 另附一条本轮照片复核得到的**结构性事实**：Round 2 的照片里，屏幕**顶端可见的第一行**是
+  `ACPI: sleep states S4 S5` —— 也就是说**控制台已滚动**，任何时刻可见的只有**最后约 40 行**。
+  这直接决定了"哪些证据能被读到"：**落在滚动窗口之外的输出，即使打印了也看不到。**
+
+### 1.5 照片状态（**如实登记**）
+
+* **Round 4 的屏幕照片文件仍不在本机、也不在本会话中。** 已检索
+  `Downloads / Pictures / Desktop / Documents / %TEMP% / %APPDATA% / .dsh\attachments`，
+  09:00 之后**没有任何**新增图片文件；`.dsh\attachments` 里只有本次分析自己生成的裁切图。
+* 因此上面那段屏幕内容在本文件中记录为**实机操作者的确认陈述**（停留时长已确认），
+  **不作为可复核的照片证据**；照片若日后提供，建议按 `scripts/scrub-log.py` 的同一标准过一遍
+  再考虑留档（本项目**不把屏幕照片入库**）。
+* 另附一条本轮照片复核得到的**结构性事实**：Round 2 的照片里，屏幕**顶端可见的第一行**是
+  `ACPI: sleep states S4 S5` —— 也就是说**控制台已滚动**，任何时刻可见的只有**最后约 40 行**。
+  这直接决定了"哪些证据能被读到"：**落在滚动窗口之外的输出，即使打印了也看不到。**
 * 已核对**确实存在**的历史照片（用于 §1.2 的对照）：`IMG20261013011501.jpg`（Round 1 引导）、
   `IMG20261013020953.jpg`（Round 2 引导）、`IMG20261013001447.jpg`（`001004` 引导）；
-  裁切件在 `shots/`。
-* **发布照片的注意事项**：屏幕照片可能包含 ACPI 表清单、device path 等；本项目**不把屏幕照片入库**
-  （现有 `shots/` 只在本机，未发布）。若要把 Round 4 照片留档，建议先按 `scripts/scrub-log.py`
-  的同一标准人工过一遍，或只留裁切后的纯 ACPI/PCI 片段。
+  裁切件在 `shots/`（本机，未发布）。
+* **发布照片的注意事项**：屏幕照片可能包含 ACPI 表清单、device path 等身份线索；
+  本项目**不把屏幕照片入库**。若要留档，建议只留裁切后的纯 ACPI/PCI 片段。
 
 ---
 
@@ -357,16 +408,23 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 
 **两条结构性发现：**
 
-* **#1+#3 拼接成一块连续 48 MiB**：`0xFD000000 + 0x1E00000 = 0xFEE00000`，
+* **#1 + #2 + #3 连成一块连续 48 MiB**：`0xFD000000 + 0x1E00000 = 0xFEE00000`，
   `0xFEE00000 + 0x1200000 = 0x1_0000_0000` —— 即 32 位空间顶部的
   **`0xFD000000–0xFFFFFFFF`（`0x3000000` = 48 MiB）一整块固件保留 MMIO**，
-  只因属性字不同被切成三个描述符。
-* `#0` 与 `#2` 是 **ACPI 已声明、OS 自己拥有的硬件**（ECAM、LAPIC）；
-  `#1` 与 `#4` 是 **ACPI 里完全没有主人的两块**。这正好回答了"`DevirtualiseMmio=false`
-  是否值得单独测"：**只有这两块存在"保住它的虚拟映射"这一机制的着力点**，
-  而 OpenCore 自己在 `ServiceOverrides.master.c:264-270` 写的失败模式
-  （Haswell 的 `0xFED1C000`、`0xFF000000`："某些固件的运行期服务/SMM 仍会解引用这些虚拟地址"）
-  说的正是这种情况 —— 本机 `MmioWhitelist` 为空，所以**什么都没被保护**。
+  中间**包含 #2 那个 4 KiB 的 LAPIC 描述符**；三个描述符地址范围整体连续，
+  **只因属性字不同被切开**（#2 是 `…0001`＝UC，#1/#3 是 `…100D`）。
+  **必须写成 #1+#2+#3，不能写成 #1+#3**（本轮勘误，见文首）。
+* `#0` 与 `#2` 在 ACPI 里有精确对应物（ECAM、LAPIC）；`#1` 与 #4 的子区间在 ACPI 文本里**找不到主人**。
+
+> **⚠️ 必须写死的反面约束（本轮勘误）**：
+> **"ACPI 文本里搜不到精确匹配" ≠ "固件不使用它" ≠ "它应当进 `MmioWhitelist`"。**
+> 本文件初版把 #1/#4 的"无 ACPI 主人"当成了"白名单 A/B 的着力点"，这是**越界推导**。
+> `MmioWhitelist` 只能依据**固件运行期访问需求**（运行期服务 / SMM / AML 是否解引用这些
+> **虚拟**地址）来判断，而 ACPI 反编译结果**根本不含这个信息**：这五条本来就是
+> **EFI 内存描述符**，ACPI 只能"解释"它们，不能证明谁在运行期用它们。
+> OpenCore 自己的注释（`ServiceOverrides.master.c:264-270`）举的是 Haswell `0xFED1C000`、
+> `0xFF000000` 这类**实测到**的运行期依赖；本项目**没有任何本机运行期证据**。
+> ⇒ **在拿到运行期证据之前，既不提出也不批准 `MmioWhitelist` 的修改**（见 §2.7 U8、§4 候选 B′）。
 
 **怎么读这个结果（对"`DevirtualiseMmio=false` 是否值得单独测"）：**
 
@@ -454,10 +512,21 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 | U1 | **`_CRS` 报出的 32-bit 窗口取决于固件写在 RAM `0x96931000` 的 `RSTE/RSB0..3/RSS0..3`，ASL 层面不可知。** `NBTP/NBTS` 本身**已闭合**（`:292 Name (NBTP, 0xFEC00000)`、`:237 Name (NBTS, 0x5000)`，静态、无写入者），且静态路径下第二个 32-bit 窗口为 **空**，`:2561` 分支不可达 | 无法从 ACPI 反编译判断 `_CRS` 实际报哪几个窗口；要确认只能靠内核侧 ACPI 日志（本轮没有） |
 | U2 | `0xFD000000`（30 MiB）的占用者（ACPI 无声明；780M 的 BAR 在别处） | 决定"保住它虚拟映射"的白名单 A/B 是否有必要 |
 | U3 | `0x460000000` 那 514 MiB 的具体占用者（只知道是 `MAB` 基址、且 ACPI 未声明该子区间） | 同上 |
-| U4 | macOS 24.6.0 是否支持 `pci_log` / `pci_log_mode`（源码来自本机取回的 IOPCIFamily，未与 24.6.0 逐版本对齐） | 决定候选 A 是否有信息量 |
-| U5 | Round 4 的**停留时长** | 决定 §1.4 的"`doConfigure()` 未返回"是否成立 |
-| U6 | Round 4 的照片 | 本文件只用口述 |
+| U4 | ~~macOS 24.6.0 是否支持 `pci_log` / `pci_log_mode`~~ | **已闭合**：**不支持**。见 §7.1（上游 tag 证据） |
+| U5 | ~~Round 4 的停留时长~~ | **已闭合**：实机操作者确认 >10 分钟。见 §1.5 |
+| U6 | Round 4 的照片文件 | 仍未提供；本文件只记实机确认陈述 |
 | U7 | `VoodooI2CACPIController` 在 Round 1 照片里的 HID 字样 | 与当前问题无关，仅登记 |
+| U8 | **五块 MMIO 里，哪些是固件运行期（UEFI runtime / SMM / AML）真正访问的** | `MmioWhitelist` 的**唯一**合法依据；ACPI 文本搜索**不能**替代（§2.5 反面约束） |
+| U9 | `kPEDisableScreen` 之后 `IOLog`/`kprintf` 的确切去向 | 决定"窗口内能不能看到任何东西"（§7.2，仍未证） |
+| U10 | Round 3 与 Round 4 同为"无 `npci`"却停在不同位置的原因 | 见 §1.3；目前无法解释 |
+
+### 2.8 与"能否读到证据"相关的两条硬约束（本轮新增）
+
+1. **滚动窗口**：控制台会滚动，任一时刻屏幕上只有**最后约 40 行**
+   （Round 2 照片顶端可见行 = `ACPI: sleep states S4 S5`，而它之前已打印了整张 ACPI 表清单）。
+   ⇒ 任何"靠屏幕读某个早期阶段的计数/清单"的方案，**只有在引导恰好停得足够早时**才成立。
+2. **静默窗口**（§1.4）：`configure()` 在 `doConfigure()` 期间关闭 PE 屏幕。
+   ⇒ 想观察 PCI 枚举内部，必须有一个**绕过该窗口**的通道；§7 的结论是**没有**。
 
 ---
 
@@ -544,16 +613,44 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 
 ## 4. Round 5 候选（**只给 diff 与分析，全部不写入**）
 
-### 4.1 排序依据
+### 4.1 排序依据（本轮重排）
 
-`IOPCIConfigurator::configure()` 在 `doConfigure()` 期间**关闭屏幕**（§1.4），
-所以现在**根本不知道**挂在四遍 `iterate` 中的哪一遍、哪个设备。**在拿到这个信息之前**，
-任何"改一个 quirk 再看"的试验都是在赌 —— 而且 Round 4 已经演示了这种赌法的产出：
-`npci` 与 MAT 两组变量换来的是**同一个屏幕停点**。
+排序原则由"先买看得见"**改为**下面这条 —— 因为在 §7 的审计之后，"看得见"这条路被证否了：
 
-所以排序原则：**先买"看得见"，再买单变量。**
+> **判据：在"屏幕上只有最后约 40 行"+"`doConfigure()` 期间屏幕被关"这两个硬约束（§2.8）下，
+> 一个实验只有满足下列任一条才算有信息量：**
+> **(i) 它的决定性结果落在 `logs/opencore-*.txt`（必然取回的持久文件）里；**
+> **(ii) 它把失败点**移出**静默窗口（更早失败 → 早期屏幕可读；或成功 → Recovery）；**
+> **(iii) 它改变那最后 40 行的内容。**
 
-### 候选 A（首选）—— 打开 IOPCIFamily 自己的 PCI 日志
+按这条判据：
+
+| 候选 | 决定性证据落在哪 | 是否满足判据 | 结论 |
+|---|---|---|---|
+| **A** `pci_log=…` | 静默窗口**内部** | ❌ 且 §7.1 证明**实机不支持该 boot-arg** | **撤销** |
+| **B** `DevirtualiseMmio=false` | **(i)** 提前失败（`EB.MM.AKM`/STOP 0x16）→ OpenCore 日志；(ii) 成功 → Recovery | ✅ | **首选** |
+| **C** 禁用 `DNET` | 屏幕上的 ACPI 失败计数（**早期**） | 仅 (ii) 成立时 | 单独校准，不并轮 |
+| **D** 禁用 `SSDT-PLUG-ALT` | OpenCore 日志（表清单）＋ 早期屏幕（`AppleACPICPU`） | 部分 | 备选 |
+| **B′** `MmioWhitelist` | 同 B，但依据不足（§2.5 反面约束） | ❌ 无运行期证据 | **仅登记，不批准** |
+
+---
+
+### 候选 A —— ❌ **已撤销**（实机内核不支持该 boot-arg）
+
+**撤销理由（硬证据，见 §7.1）**：`pci_log` / `pci_log_mode` / `pci_log_rc` 是
+**`IOPCIFamily-726.x` 系列（macOS 26 时代）**才有的 boot-arg。
+本机跑的是 **macOS 15.6 / Darwin 24.6.0**（kext 构建时间 2025-07-14/15），
+其上所有 IOPCIFamily tag（≤ `681.140.3`，2025-08-20）**都没有这三个参数**。
+⇒ 追加 `pci_log=0x200 pci_log_mode=0x3` 在实机上是**空操作**：既不会开启任何日志，
+也不会报错。**它不可能定位 PCI 设备，也不可能解决 U1。**
+
+> **保留说明**：本文件初版引用这些符号时用的源码实为 `IOPCIFamily-726.0.5`
+> （本机 `audit/iopicifamily/IOPCIPrivate.h` 的 sha256 与该 tag **完全一致**，见 §7.1）。
+> 下面的初版技术内容**原样保留**，仅作为"若将来升到 macOS 26 才可能用到"的记录，
+> **不再作为 Round 5 候选**。
+
+<details>
+<summary>初版候选 A 内容（macOS 26 才适用；仅存档）</summary>
 
 **性质**：**只改日志开关**，不改任何 `gIOPCIFlags` 语义（语义由 `pci=` / `npci=` 控制，本轮绝不动）。
 
@@ -624,40 +721,93 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 是本机取回的 IOPCIFamily 源码里确认的，**尚未与 macOS 24.6.0 逐版本对齐（U4）**；
 若该内核不支持这两个 boot-arg，本轮的产出就是"什么都没变"，判据必须预先承认这种结果。
 
-### 候选 B —— 单独 `DevirtualiseMmio=false`（`SetupVirtualMap` 保持 `true`）
+</details>
 
-**diff**：
+---
+
+### 【首选】候选 B —— 单独 `DevirtualiseMmio=false`（`SetupVirtualMap` 保持 `true`）
+
+> **这是本轮唯一推荐的 Round 5 实验。** 理由见 §4.1 判据 (i)：它的**决定性分支落在
+> `logs/opencore-*.txt` 里** —— 那是每次引导都必然取回、且不受屏幕滚动/静默窗口影响的持久文件。
+
+**候选产物（已生成，未写入 U 盘）**：
+
+| 项 | 值 |
+|---|---|
+| 候选文件 | [`efi/candidates/round5B-devirtualisemmio-false.plist`](../efi/candidates/round5B-devirtualisemmio-false.plist) |
+| 生成脚本 | `audit/make-round5b.py`（含"只允许一处变化"的断言） |
+| 候选 SHA-256（脱敏版） | `0F375375D74C523F7FDAD5E3A1DF864ED1BD44BE45E2E6618B10643A6E54BF4A`，52125 B |
+| `ocvalidate` 1.0.9 DEBUG | **No issues found**（exit 0） |
+| 语义差异（脚本断言） | **恰好** `Booter.Quirks.DevirtualiseMmio` 一项 |
+| 字节差异 | **1 行**，1-based **171**（`<true/>` → `<false/>`） |
+
+**精确 diff（卡上原始配置将按同一位置就地改，SMBIOS 原样保留）**：
 
 ```diff
-   <key>DevirtualiseMmio</key>
--  <true/>
-+  <false/>
-   <key>SetupVirtualMap</key>
-   <true/>
+--- D:\EFI\OC\config.plist            (Round 4 基线, 52124 B)
++++ D:\EFI\OC\config.plist            (Round 5B 候选, 52125 B)
+@@ -168,7 +168,7 @@
+ 			<key>ClearTaskSwitchBit</key>
+ 			<false/>
+ 			<key>DevirtualiseMmio</key>
+-			<true/>
++			<false/>
+ 			<key>DisableSingleUser</key>
+ 			<false/>
+ 			<key>DisableVariableWrite</key>
 ```
 
-**依据**：本机**从未**测过；上游证据分裂（§2.5）。
+**保持不变（脚本逐项断言）**：`SetupVirtualMap=true`、`EnableWriteUnprotector=false`、
+`RebuildAppleMemoryMap=true`、`SyncRuntimePermissions=true`、`ResizeAppleGpuBars=0`、
+`UEFI.Quirks.ResizeGpuBars=-1`、`Booter.MmioWhitelist=[]`、`boot-args` 无 `npci`、
+`Kernel.Add`/`ACPI`/`NVRAM`/`PlatformInfo`/`DeviceProperties` 全部逐字节不变。
 
-**预期观察（三岔，必须预先写死）**：
-| 结果 | 含义 | 下一步 |
-|---|---|---|
-| 屏幕越过 `PCI configuration` / 进入 Recovery | devirt 是本停点的变量 | 复测一次确认 |
-| 退回 `EB.MM.AKM` / STOP 0x16（在 boot.efi 之前） | 与 issue #9 同型，devirt 在本机**必须开** | 记结论，回滚，转别的轴 |
-| 停在**同一行** | 与 issue #10 一致，devirt 与本停点无关 | 记为"不足以移动停点"，**不排除**其影响 |
+**依据与"诊断价值"评估（用户问的两点）**：
 
-**风险**：本批候选中**最高** —— 可能连 `boot.efi` 都进不去。**回滚**：改回
-`Copy-Item D:\_backup-round0\config.plist.round4 D:\EFI\OC\config.plist -Force`（写入前创建该备份）。
+* **来自五块 EFI MMIO 描述符**：本机有 5 条 `EfiMemoryMappedIO|EFI_MEMORY_RUNTIME` 描述符、
+  共 818 MiB（§2.5）。关掉 devirt 后这 818 MiB **保持运行期映射**，
+  内核可用页与 slide 空间因此改变 —— 这是**本机从未运行过的内存图状态**。
+  但必须承认：**macOS 的 IOPCI 不使用固件的虚拟映射**，因此 devirt 影响
+  `IOPCIConfigurator::configure()` 的**机制并不强**；上游 issue #10 的实测也正好是
+  "关掉后停在完全相同的一行"。**所以本实验的第一预期是"没有变化"。**
+* **来自 1401 v1.9→v1.10 的默认值变化**：`v1.10.0` 提交 `1d84d960` 把 Zen 4/5 的
+  `DevirtualiseMmio` + `SetupVirtualMap` **强制为 true**（≤1.9.0 是两者皆 off），
+  并在仓库自带测试里点名 `AMD Ryzen 7 8845HS`。也就是说**本机现在的配置正建立在这个假设上**，
+  而假设从未在本机被单独检验过。**检验它本身就是价值**（哪怕结论是"它无关"）。
+* **已知风险**：`EB.MM.AKM` / STOP 0x16（`EB.MM.AKM` 在本机 4 份历史日志里出现过；
+  issue #9 的维护者回复就是为它写的）。若发生，**停点前移到 boot.efi 之前**，
+  **完全落在 OpenCore 日志里**，反而最干净。
 
-**不能证明什么**：同 §2.5 末条。
+**预期可观察到的三种结果（预先写死，不得事后改写）**：
 
-> **更"知情"的变体 B′（**需要单独授权**，因为要动 `MmioWhitelist`）**：§2.5 已证明五块里只有
-> `0xFD000000` 与 `0x460000000` 两块在 ACPI 里**完全没有主人**，而 `0xE0000000`（ECAM）与
-> `0xFEE00000`（LAPIC）是 macOS 自己会重映射的、ACPI 已声明的硬件。所以如果真要做
-> "保住固件运行期映射"这个实验，**受控得多的做法**是保留 `DevirtualiseMmio=true`
-> 而只把那两块放进 `MmioWhitelist`（`skip 1`），**而不是**整个关掉 devirt。
-> 但 `MmioWhitelist` 属于用户明确列为"未获批准不得触碰"的项，**本轮只登记，不排入。**
+| # | 结果 | 证据在哪 | 含义 | 下一步 |
+|---|---|---|---|---|
+| 1 | **提前失败**：屏幕/日志出现 `EB.MM.AKM`、`STOP 0x16`、`No slide values are usable` 等，**进不到内核** | **`logs/opencore-*.txt`（必然取回）** | devirt 在本机**是承重的**：固件的运行期 MMIO 映射被需要（这也**首次**给出"这些区域确实被使用"的**运行期证据**，见 §2.7 U8） | 记结论 → 回滚 → devirt 从嫌疑名单移除，转 D |
+| 2 | **仍停在同样两行**，无新输出 | 屏幕（最后约 40 行） | devirt **不足以**移动本停点（与 issue #10 一致） | 记为"不足以"，**不得**解释为"devirt 无影响"；转 D 或先补 U8 |
+| 3 | **越过 `PCI configuration`**（出现 `[ PCI configuration end, … ]`）或**进入 Recovery** | 屏幕 | devirt 是**本停点的充分原因之一** | **复测一次**确认可重复，再谈后续 |
 
-### 候选 C —— 删掉已证无效的 `SSDT-Disable_Network_GPP6`
+**不能证明什么**：
+* 结果 2 **不能**排除 devirt 的影响（屏幕停点相同 ≠ 内部停点相同，§1.2 措辞约束）。
+* 结果 1/2/3 都**不能**指出停在四遍 `iterate` 中的哪一遍、哪台 PCI 设备。
+* 结果 1 **不能**用来为 `MmioWhitelist` 选区域（那是 §2.5 反面约束禁止的推导）。
+
+**风险、基线与回滚**：
+
+| 项 | 内容 |
+|---|---|
+| 风险等级 | 本批候选**最高**，但**只影响可引导性**，不触及磁盘/分区/BIOS |
+| 风险表现 | 可能连 `boot.efi` 都进不到（`EB.MM.AKM`/STOP 0x16），需要重新引导回退 |
+| 写入前基线检查 | 卡上 `D:\EFI\OC\config.plist` 的 SHA-256 **必须等于** `021F02B3B46953021FF31835518790DD6BEB57074BE822D127305434581815E4`（52124 B）；不等则**拒绝写入** |
+| 写入后预期哈希 | `34605D9DA312DC0B5DA3E6F37A5BA3E0CAAABC7659CA3DBC744249DA979C99C4`（52125 B）—— 这是**在卡上原始文件上只改第 171 行**后算出的预测值（真实 SMBIOS 保留） |
+| 写入前备份 | `Copy-Item D:\EFI\OC\config.plist D:\_backup-round0\config.plist.round4 -Force`（**若尚不存在**） |
+| 校验 | 写入后：`ocvalidate` 1.0.9 DEBUG 必须 **No issues found**；`plistlib` 语义比对必须**只有** `Booter.Quirks.DevirtualiseMmio` 不同；`npci` 计数必须为 0 |
+| 回滚（一步） | `Copy-Item D:\_backup-round0\config.plist.round4 D:\EFI\OC\config.plist -Force` |
+| 回滚校验 | SHA-256 必须回到 `021F02B3…` |
+| **禁止** | 用 GitHub 上的**脱敏**候选直接覆盖卡上配置（会抹掉真实 SMBIOS）—— 只能**就地改那一个 token** |
+
+---
+
+### 候选 C —— 删掉已证无效的 `SSDT-Disable_Network_GPP6`（**必须单独做，不与 B 合并**）
 
 **diff（`ACPI → Add` 的第 0 条）**：
 
@@ -680,11 +830,18 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 
 **风险**：极低（该表从不生效，不改变任何行为）。
 
-**信息量**：对 PCI 停点**低**；它的价值是**校准**——如果失败数确实 3→2，说明我们对
-"哪张表为什么失败"的模型是**对的**，可以放心用它去解读"若 U1 成立会发生什么"。
+**信息量**：对 PCI 初始化故障**低**，且**不得与候选 B 合并**（用户明确要求作为独立实验）。
+它的价值是**校准**：如果失败数确实 3→2，说明我们对"哪张表为什么失败"的模型是**对的**；
 如果**没有** 3→2，说明我们的模型有洞，必须回去修 §2.4。
 
-**不能证明什么**：即使 3→2，也**不能**说明这三个错误与 PCI 停点无关。
+> **⚠️ 可观测性警告（本轮新增，直接决定 C 值不值得做）**：那个 `3 table load failures` 计数
+> 出现在**引导最早期**的 ACPI 段。而 §1.5 已证明**控制台会滚动、屏幕只保留最后约 40 行** ——
+> 在**停到 `PCI configuration` 的那类引导里，ACPI 段早已滚出屏幕**（Round 2 照片顶端可见行
+> 就已经是 `ACPI: sleep states S4 S5`，位于 ACPI 失败清单**之后**）。
+> ⇒ **C 的关键观测量只有在"引导恰好停得足够早"时才读得到。** 若 C 不改变停点，
+> 它预期的 3→2 **根本拍不到**。**这是把 C 排在 B 之后的第二个理由（第一个是信息增益低）。**
+> 可以改用 OpenCore 日志里的 `OCA: Inserted table SSDT (OEM …DNET)` 是否消失来**部分**替代
+> （那只证明配置生效，证明不了 3→2）。
 
 ### 候选 D —— `SSDT-PLUG-ALT` 的 A/B（禁用注入表）
 
@@ -693,48 +850,97 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 **依据**：§2.3（本机固件**自有** `\_SB.PLTF.C000..C00F`，注入表额外加了 16 个 `\_SB.C000..C00F`）
 + issue #21 第二位报告人"禁用 SSDT-PLUG-ALT 才越过 AppleACPICPU"。
 
-**预期观察**：屏幕 ACPI 段的表清单少一行 `CpuPlugA`；`AppleACPICPU` 段是否变化；
+**⚠️ 不得把"结构冗余"当成"已证实有害"**（用户明确要求）：
+§2.3 只证明了三件事 —— (a) 两者作用域不同、**没有命名冲突**；(b) 命名空间里确实**多出 16 个
+`ACPI0007` 节点**；(c) Round 1 的照片里 `AppleACPICPU` **恰好 16 条、没有幽灵 CPU**。
+**没有任何证据**表明这些多余节点在本机造成了故障；而且 `plugin-type=1` 是 macOS
+CPU 电源管理正常工作的常见前提，**删掉它可能带来副作用而非收益**。
+⇒ D 的定位是"**可选的单变量对照**"，不是"已知问题的修复"。
+
+**预期观察**：OpenCore 日志里 `OCA: Inserted table SSDT (OEM …CpuPlugA)` **消失**（必然可见）；
+屏幕 `AppleACPICPU` 段是否变化（**仅在引导停得足够早时可见**，同 §1.5 的滚动窗口限制）；
 停点是否移动。
 
 **风险**：低–中。macOS 会失去 `plugin-type=1` 那个 `_DSM` → CPU 电源管理可能退化；
 但这是 **Recovery**（不安装），可接受。PCI 设备节点不变（§2.3）。
 
-**不能证明什么**：即使有变化，也分不清是 `plugin-type` 缺失还是"16 个多余 ACPI0007 节点"消失造成的。
+**不能证明什么**：即使有变化，也分不清是 `plugin-type` 缺失还是"16 个多余 ACPI0007 节点"消失造成的；
+也不能据此断定原有配置"有害"。
 
-### 候选 E —— `npci=0x3000` / BIOS Re-Size BAR：**登记但本轮不排入**
+### 候选 B′ —— `MmioWhitelist`：**研究方向，明确不批准**
+
+**不批准的理由（硬性）**：`MmioWhitelist` 只应按**固件运行期访问需求**决定，
+而本项目**目前没有任何本机运行期证据**说明固件在运行期解引用那 5 个区域中的任何一个
+（§2.5 反面约束、§2.7 U8）。**"ACPI 文本里搜不到主人"不构成依据** —— 这五条本来就是
+EFI 内存描述符，ACPI 只能解释它们，不能证明谁在用它们。
+⇒ **在拿到运行期证据（例如候选 B 结果 1 那种"devirt 是承重的"证据，或固件运行期服务
+日志/反汇编）之前，不提出、不批准、不写入任何 `MmioWhitelist` 修改。**
+
+### 候选 E —— `npci=0x3000` / BIOS Re-Size BAR / GPU BAR：**登记但本轮不排入**
 
 * `npci=0x3000`：1401 的 `bootfix.py` 阶梯恰好以它为终点，issue #23 里 `npci=0x2000`
-  **确实**越过了本停点。但本机 Round 2 已证明 `npci=0x2000` 在**本停点无效**
-  （`MBA:OUT` 含 `npci=0x2000`，屏幕照样停在 `PCI configuration begin`）。
-  在先验概率低、且候选 A 尚未做完的情况下**不排入**；需单独批准。
-* BIOS 关 Re-Size BAR：issue #23 的**唯一验证解法**，但**改 BIOS 超出当前授权**，不排入。
-* OpenCore 侧的 `ResizeAppleGpuBars` / `ResizeGpuBars`：issue #23 明确记录 `ResizeGpuBars=13`
-  会**破坏 GOP framebuffer**（选择界面变 4 列小字/不显示）。在拿到候选 A 的日志前**不动**。
+  **确实**越过了同一停点。但本机 Round 2 已证明 `npci=0x2000` 在本停点**不足以**进入 Recovery
+  （`MBA=OUT` 含 `npci=0x2000`，屏幕照样停在 `PCI configuration begin`）。
+  先验概率低，**不排入**；需单独批准。
+* BIOS 关 Re-Size BAR：issue #23 的**唯一验证解法**，但**改 BIOS 超出授权**，不排入。
+* OpenCore 侧的 `ResizeAppleGpuBars` / `ResizeGpuBars`：属**GPU BAR**，用户明确**不批准**；
+  且 issue #23 记录 `ResizeGpuBars=13` 会**破坏 GOP framebuffer**（选择界面变 4 列小字/不显示）。
+  **不动。**
+* IOMMU / `DisableIoMapper`：**不批准**（且 §2.2 已证 `_OSC` 正常，无证据支持）。
 
-### 4.6 推荐组合与判据
+### 4.6 最终建议：**只做候选 B，且单独做**
 
-**推荐 Round 5 = 候选 A（唯一改动量：2 个 boot-arg 词）**；若用户希望顺带做一次"零行为变化"的校准，
-可**同轮**加上候选 C（删无效注入表）。A + C 互不干扰：A 只加 boot-arg，C 只关一张**从不生效**的表。
+**推荐 Round 5 = 候选 B（`Booter.Quirks.DevirtualiseMmio` 由 `true` 改 `false`，其余一概不动）。**
 
-**成功判据（预先写死）**
-1. 对照未破：`MBA:OUT` 仍无 `npci`；四个 VoodooI2C 条目仍不注入；`OC: Prelinked status - Success`；
-   `WRUNPROT 0 / RBMAP 1 / VMAP 1 / RTPERMS 1 / DEVMMIO 1` 保持不变。
-2. A 生效：`PCI configuration begin` 之后出现 `[PCIe:0 …]` 前缀的 PCI 行。
-3. C 生效：`table load failures` 由 `3` 变 `2`。
-4. **停留时长 ≥10 分钟**，并明确回答是否出现 `[ PCI configuration end, bridges N, devices M ]`。
+**为什么它比其它候选更有信息量（这是问题的核心）**
 
-**失败判据**：若 A 没带来任何新行，本轮**只能**记为"PCI 日志通道在 `doConfigure()` 内不可用"，
-**不能**记为"PCI 配置没有进展"。
+1. **它是唯一一个"决定性结果落在必然取回的持久文件里"的候选。**
+   §7 的审计结论是：本机**没有**任何可用的内核日志采集通道 —— 屏幕只有最后约 40 行、
+   `doConfigure()` 期间屏幕被关、没有串口/kdp、硬卡死后没有任何机制能把内核输出取回。
+   在这个约束下，**唯一可靠的证据通道是 `logs/opencore-*.txt`**（每次引导都被 OpenCore 写回 U 盘）。
+   候选 B 的三条分支里，最干净的那条（**提前失败**：`EB.MM.AKM` / `STOP 0x16` /
+   `No slide values are usable`）**正好全部落在 OpenCore 日志里**，**不需要照片、不需要时长**。
+   A（已撤销）、C、D 都不具备这个性质。
+2. **它检验的是当前配置赖以成立的假设本身。** 1401 从 `v1.10.0` 起对 Zen 4/5 **强制**
+   `DevirtualiseMmio=true`（仓库自带测试点名 `AMD Ryzen 7 8845HS`），Dortania 也把它列为
+   同类机型的第一嫌疑项 —— 但**本机从未单独检验过它**。即使结论是"无关"，
+   那也是把一个高优先嫌疑项**正式排除**，而不是又一次猜测。
+3. **它的信息是双向可用的。** 结果 1（提前失败）首次给出"这些区域**确实被固件运行期使用**"的
+   **运行期证据** —— 这正是 §2.7 U8 缺的东西，也是将来任何 `MmioWhitelist` 讨论的**唯一合法前提**。
+   结果 3（越过停点）则直接命中故障。结果 2 虽然弱，但仍有"不足以"的结论价值。
+4. **相比 C/D 的优势**：C 的关键观测量（ACPI 失败数）位于**会滚出屏幕的早期区域**
+   （§4 候选 C 的可观测性警告），且对 PCI 故障信息增益低；D 的机制与本停点关系更远，
+   而且"结构冗余"**不能**当成"已证实有害"（§4 候选 D）。两者都更适合排在 B 之后。
+
+**为什么单独做、不与 C 合并**：用户明确要求 C 作为独立校准实验。
+另外 B 有真实的"提前失败"风险，**混轮会让归因变脏**（一次引导同时动两处，失败就说不清是谁）。
+
+**成功/失败判据（预先写死，不得事后改写）**
+
+| # | 观察 | 判据 |
+|---|---|---|
+| 1 | 对照未破 | `logs/opencore-*.txt` 中：`MBA:OUT` 仍无 `npci`；`DEVMMIO 0`（**本轮预期变化**）；`WRUNPROT 0 / RBMAP 1 / VMAP 1 / RTPERMS 1` 保持不变；`OC: Prelinked status - Success`；四个 VoodooI2C 条目仍不注入 |
+| 2 | 配置生效 | 日志中 **不再出现** `OCABC: MMIO devirt …` 那一组行（`DevirtualiseMmio=false` 时该段不执行）—— 这是 B **已经生效**的直接证据 |
+| 3 | 结果分类 | 按 §4「候选 B」三条分支之一归入；**必须提供停留时长** |
+| 4 | 明确回答 | 是否出现 `[ PCI configuration end, bridges N, devices M ]` |
+
+**失败判据**：若结果为分支 2（停在同样两行），本轮**只能**记为
+"`DevirtualiseMmio=false` **不足以**移动本停点"，**不能**记为"devirt 无影响"、
+**不能**指出停在哪个 PCI 设备、**不能**据此为 `MmioWhitelist` 选区域。
+
+**不做**：不与 C 合并、不动 `MmioWhitelist`、不动 GPU BAR、不试 `npci=0x3000`、
+不动 BIOS/Windows EFI/分区/IOMMU。
 
 ---
 
 ## 5. 本轮明确不做
 
-* ❌ 不写入 U 盘、不改 `config.plist`（本文件只给 diff）。
+* ❌ 不写入 U 盘、不改卡上 `config.plist`（本文件只给 diff 与候选文件）。
 * ❌ 不改 BIOS / Windows EFI / BCD / 任何分区。
-* ❌ 不试 `npci=0x3000`、不叠 `MmioWhitelist`、不动 `IOMMU`/`DisableIoMapper`。
+* ❌ 不试 `npci=0x3000`、不叠 `MmioWhitelist`、不动 `IOMMU`/`DisableIoMapper`、不动 **GPU BAR**。
 * ❌ 不批量套用任何 ACPI 补丁；**特别是不搬 issue #21 的四个 DSDT Find/Replace**（§3.1）。
-* ❌ 不进 Round 5，直到用户逐项批准且先回滚到已验证基线。
+* ❌ **不做 A+C 组合**（用户明确不批准）；C 必须作为独立实验。
+* ❌ 不进 Round 5，直到用户批准候选 B 且先回滚到已验证基线。
 
 ---
 
@@ -742,10 +948,145 @@ OpenCore 遍历的是 **EFI 内存描述符表**，逐条打印 `Type == EfiMemo
 
 | 文件 | 变化 |
 |---|---|
-| `logs/opencore-2026-10-13-095517.txt` | **新增**（Round 4 引导日志；已按 `scripts/scrub-log.py` 脱敏，11 行被替换，自检 `no real identity value remains`） |
-| `docs/06-只读分析与Round5候选.md` | **新增**（本文件） |
-| `docs/05-受控实验记录.md` | 追加 §7.10 / §7.11（Round 4 引导结果与判定），并指向本文件 |
-| `README.md` | 追加 Round 4 实测结果段，并在文档索引里加入本文件 |
+| `logs/opencore-2026-10-13-095517.txt` | 上一轮新增（Round 4 引导日志；已按 `scripts/scrub-log.py` 脱敏，自检通过） |
+| `docs/06-只读分析与Round5候选.md` | **本轮大改**：Round 4 定稿、9 条勘误、§7 日志可观测性审计、候选重排、候选 A 撤销 |
+| `docs/05-受控实验记录.md` | 本轮追加 §7.10 / §7.11 定稿（Round 4 正式结论 + Round 3 观测保留） |
+| `efi/candidates/round5B-devirtualisemmio-false.plist` | **新增**：候选 B（脱敏；`ocvalidate` 1.0.9 → No issues found） |
+| `efi/candidates/README.md` | 候选表登记 round5B |
+| `README.md` | Round 4 实测结果更新为"已确认 ≥10 分钟无新屏幕输出" |
 
 **未入库**（且不得入库）：`audit/acpi/firmware/**`（ACPI 二进制与反编译，含 `MSDM` 的 OEM 密钥）、
-屏幕照片、任何 `.aml` / `.bin` / `.efi`。
+`audit/iopicifamily/**`、`audit/*.py`、屏幕照片、任何 `.aml` / `.bin` / `.efi`。
+
+---
+
+## 7. PCI 日志可观测性审计（第三阶段·独立验证）
+
+> 这一节回答的问题是：**"把 `pci_log=0x200 pci_log_mode=0x3` 加进 boot-args，能不能真正看到
+> `doConfigure()` 内部？"** 以及更一般的 **"这台机器上到底有没有任何可用的内核日志通道？"**
+
+### 7.0 四个概念必须严格分开
+
+| 概念 | 对 `pci_log=0x200 pci_log_mode=0x3` 的结论 | 依据 |
+|---|---|---|
+| **(a) 源码支持输出** | ~~是~~ → **否**（在实机版本上） | §7.1：`pci_log*` 是 **726.x** 系列（macOS 26）才有；本机是 15.6 |
+| **(b) 日志在系统内部被生成** | **部分**：即使参数存在，`doConfigure()` 内是否生成也未知；**本机连参数都不存在** | §7.1 / §7.2 |
+| **(c) 用户能在屏幕看到** | **未知**：`kPEDisableScreen` 之后 `IOLog`/`kprintf` 的确切去向**未能证实**；且控制台滚动只留最后约 40 行 | §7.2 |
+| **(d) 硬卡死后仍能取回** | **否**：本机**没有任何**机制能把内核输出跨掉电取回 | §7.3 / §7.4 |
+
+**四者不能互相替代**：(a) 成立**不蕴含** (b)，(b) 成立**不蕴含** (c)，(c) 成立**不蕴含** (d)。
+本轮初版正是把 (a) 当成了 (c)+(d)，这是**候选 A 被撤销的根本原因**。
+
+### 7.1 Q1 —— macOS 15.6 / Darwin 24.6.0 是否支持 `pci_log` / `pci_log_mode`？
+
+**结论：不支持（NOT SUPPORTED）。** 这是**上游一手证据**，不再是"从别的版本源码推断"。
+
+**方法**：`apple-oss-distributions/IOPCIFamily` 的 tag 是按发布切片的，文件名固定。
+对每个 tag 取 `IOKit/pci/IOPCIPrivate.h` 与 `IOPCIBridge.cpp`，查 `pci_log_mode` 是否存在，
+并用 tag 的 commit 日期与"本机 kext 构建时间"对齐。
+
+| tag | commit 日期 | `IOKit/pci/IOPCIPrivate.h` 里 `pci_log_mode` | `IOPCIBridge.cpp` 里 `pci_log_mode` |
+|---|---|---|---|
+| IOPCIFamily-617.1.1 | 2023-09-22 | ❌ | — |
+| IOPCIFamily-664.0.3 | 2024-09-24 | ❌ | — |
+| IOPCIFamily-664.81.2 | 2025-03-07 | ❌ | — |
+| IOPCIFamily-681.101.1 | 2025-04-30 | ❌ | — |
+| IOPCIFamily-681.120.3 | 2025-05-20 | ❌ | ❌ |
+| **IOPCIFamily-681.140.3** | **2025-08-20** | **❌** | ❌ |
+| IOPCIFamily-726.0.5 | 2025-10-16 | ✅ | ✅ |
+| IOPCIFamily-726.40.2 | 2025-12-01 | ✅ | ✅ |
+
+* **本机 kext 构建时间 = 2025-07-14/15**（Round 2 屏幕：`xcpm (build 11:22:54 Jul 14 2025)`、
+  `AppleKeyStore … (BUILD: Jul 15 2025 20:46:57)`），即 **macOS 15.6 / Darwin 24.6.0**。
+* 它被 `681.120.3`（2025-05-20）与 `681.140.3`（2025-08-20）**夹在中间**，而**两者都没有** `pci_log_mode`。
+* **第一个**含该特性的 tag 是 `726.0.5`（2025-10-16），属于 **726.x 系列 = macOS 26 时代**。
+* 实机侧佐证（`681.120.3` 的实际代码）：
+  ```c
+  565:  IOLog  ("pci (build %s %s), flags 0x%x\n", __TIME__, __DATE__, gIOPCIFlags);
+  566:  kprintf("pci (build %s %s), flags 0x%x\n", __TIME__, __DATE__, gIOPCIFlags);
+  ```
+  —— 15.x 的 `createRoot()` **只打印 `flags`，没有 `log mode flags` / `log flags` 字段**，
+  因为那时**还不存在** `gIOPCILogModeFlags` / `gIOPCILogFlags`。
+* **本地源码的错误来源（已定位）**：本项目 `audit/iopicifamily/IOPCIPrivate.h` 的
+  SHA-256 = `E8D6595B5EC52E2C84E9772FC8464327EF65D5666A7A955E6D0B75AA4E21AF9E`，
+  与 **`IOPCIFamily-726.0.5` 的该文件逐字节相同**。也就是说我此前引用的"Apple 源码"
+  其实是 **macOS 26 的 kext**，与实机版本**差了一个大版本**。
+
+**⇒ 判定**：在 macOS 15.6 上，`pci_log` / `pci_log_mode` / `pci_log_rc`
+**不会被解析，也不会产生任何日志**。候选 A **必须撤销**（§4）。
+
+> **仍在的两点保留意见（写清楚，不含糊）**：
+> 1. `apple-oss-distributions` 的 tag 是"按发布切片"的，**15.6 的精确 tag 未在公开列表中出现**。
+>    本结论依赖"tag 系列号与时序单调对应 OS 版本"这一前提 —— 该前提由上面的日期表支持
+>    （每个 tag 的 commit 日期与其 OS 发布时间吻合），但严格说**不是逐字节对齐**。
+> 2. 实机屏幕上**看不到** `pci (build …)` 这一行（在 Round 2 照片里它应当在
+>    `ACPI: sleep states S4 S5` 与第一条 `[addMemoryRange()]` 之间）。这与"运行的是 681.x"**一致**，
+>    但**不能单独作为证据** —— 该行也可能只是**恰好滚出可见窗口 1–3 行**（§1.5 的滚动窗口）。
+>    ⇒ 因此我把上游 tag 证据当作结论，把这条屏幕观察**只当作弱旁证**。
+
+### 7.2 Q2 —— `kPEDisableScreen` 之后，`kprintf` / `IOLog` 分别流向哪里？
+
+| 问题 | 状态 | 依据 |
+|---|---|---|
+| `IOLog` 在**屏幕开启时**能上 eDP 吗？ | **已证：能** | `AppleVTD.cpp:1322` 是**普通 `IOLog`**（不是被 `pci_log` 门控的 `VTLOG`），而它打印的 `[addMemoryRange()] AppleVTD is not yet installed as gSystem` **确实出现在屏幕上**（Round 2/4 照片） |
+| `kprintf` 与 `IOLog` 的区别？ | **部分已证** | 15.x 的 `createRoot()` **两个都调**（`IOLog` + `kprintf`），说明二者是并列的通道；`kprintf` 是内核 printf 路径，`IOLog` 走 IOKit 日志 |
+| `debug=0x8`（`DB_KPRT`）把 `kprintf` 送去串口？ | **未证（UNKNOWN）** | 本轮未能取到可核实的 `xnu`/`pexpert` 源码行；且**本机没有串口**，所以即便为真也无用（§7.3） |
+| **`kPEDisableScreen` 之后两者是否仍上 eDP？** | **UNKNOWN** | `kPEDisableScreen` 的确切语义本轮**未能从可核实源码确认**。经验旁证（真机上 `begin` 与 `end` 紧挨）与"被抑制"一致，但**不构成证明** |
+
+**因此**：`doConfigure()` 期间看不到新输出**不能**被解释为"里面什么都没发生"，
+也**不能**被解释为"里面一定卡死" —— 这正是 §1.4 把结论严格限制为
+"`configure()` 没有走到 `:3388`"的原因。
+
+### 7.3 Q3 —— 本机有没有可用的串口 / 远程内核调试通道？
+
+**结论：没有。** 逐项否掉：
+
+| 通道 | 为什么不行 |
+|---|---|
+| 传统 16550 UART（`kprintf` → `0x3F8`） | FA401UU 是消费级笔记本，**没有可用的 COM/UART 引出**；也没有 USB-C 调试配件模式的操作说明 |
+| `kdp`（内核调试协议） | 需要 **受支持的网卡** + 第二台机器；本机**无以太网口**，Wi-Fi 是 MediaTek（macOS 无驱动）⇒ 没有可用的 `kdp_match_name` 目标 |
+| 雷雳/USB4 调试 | 无证据支持；且需要另一台主机与专用线缆 |
+| eGPU/USB 串口 dongle | 属"额外硬件"，且 `kprintf` 到 USB 串口需要 macOS 侧驱动在**引导前**可用 —— 不存在 |
+
+### 7.4 Q4 —— 硬卡死后回 Windows 能否取回 PCI 枚举期间的输出？
+
+**结论：不能。** 逐项否掉：
+
+| 机制 | 为什么取不回 |
+|---|---|
+| `panic-*.txt`（写回 ESP） | 需要**真的发生 panic** 且 panic 处理路径跑起来。本机是**静默挂起**，panic 路径**从未执行**（Round 1 照片里 `OC: Panic log does not exist` 出现在 `01:129`，远在 boot.efi 之前，与内核无关） |
+| NVRAM 里的 panic 信息 | 同上 —— 依赖 panic 路径 |
+| OpenCore 自己的 `opencore-*.txt` | **只覆盖到 `#[EB|LOG:EXITBS:START]`**，即 `ExitBootServices` 那一刻；**内核启动之后一个字节都没有**。本机日志末行正是 `12:577 AAPL: #[EB|LOG:EXITBS:START]` |
+| `os_log` / ASL / `/Library/Logs` | 需要**可写的已装系统卷**；本机是从 `BaseSystem.dmg` 启动的 **RAM 盘 Recovery**，没有挂载任何可写数据卷 |
+| `msgbuf` / `sysdiagnose` / `spindump` | 都要在**用户空间**跑；本机**进不了用户空间** |
+| `debug=0x…` 故意触发 panic 以便留档 | **未证可行**：本轮未能确认哪个 `debug` 位在挂起时强制 panic；`0x100`（`DB_LOG_PI_SCRN`）只是屏幕相关位。**而且这会改变我们正在测的行为**，属于新变量 |
+
+**⇒ 唯一被证明可用的"采集"通道是：给屏幕拍照**，而它**只能拍到当时在屏幕上的最后约 40 行**（§1.5）。
+
+### 7.5 Q5 —— 别把 OpenCore 日志当成内核日志
+
+**已证**：本机每一份 `logs/opencore-*.txt` 都以 `AAPL: #[EB|LOG:EXITBS:START]` 结束
+（成功的和不成功的都一样），因为 OpenCore 在 `ExitBootServices` 之后**不再拥有**写文件的能力。
+⇒ OpenCore 日志**不能**用来判断内核是否死锁，也**不能**证明"日志到此为止 = 系统到此为止"。
+
+### 7.6 Q6 —— 还有哪些"不需要改内置磁盘、不需要额外硬件"的诊断路径？
+
+| 路径 | 可用性 | 说明 |
+|---|---|---|
+| **拍照 + 记录停留时长** | ✅ **已证可用（唯一）** | 只能覆盖屏幕最后约 40 行；必须**同时记时长**，否则无法区分"静默推进"与"挂起" |
+| OpenCore DEBUG 日志 | ✅ 已证可用，但**只到 EXITBS** | 能证明配置是否生效；**不能**证明内核行为 |
+| 让失败变成 panic（换取可留档的 panic 日志） | ⚠️ 未证可行 + **引入新变量** | 见 §7.4 末行；若将来要用，必须**单独一轮** |
+| 换 macOS 版本/恢复镜像 | ❌ 不建议 | 本机内核是 15.6；换镜像会同时改变**几十个**变量，且没有证据指向"版本本身"是原因（#34 是空线程，见 §3.2） |
+| 换介质/换配置二分 | ⚠️ 等价于候选 B/C/D，且有同样的可观测性限制 | 不额外提供信息 |
+| 硬件侧观察（Caps Lock 灯、风扇、USB 电流、外接屏） | ⚠️ 信息量低但**零风险** | 只能区分"整机死了"与"只是屏幕不再更新"；**外接屏**值得一提：若 HDMI/USB-C 外接屏仍有新输出，说明控制台通道没死，只是 eDP 被关 —— **这可能是一个便宜的旁证实验**，但需要额外显示设备，故不作为本轮候选 |
+| 用 Linux Live USB 读同样的 ACPI/PCI | ⚠️ 只读、有价值但**不回答 macOS 问题** | Linux 不报错不证明 macOS 不报错（issue #21 的 OP 正是"Linux 无 ACPI 错误"）；可作为 ACPI 事实的第三方交叉验证 |
+
+### 7.7 本节结论
+
+1. **候选 A（`pci_log=…`）在实机上是空操作，已撤销**（§7.1）。
+2. **本机没有可用的内核日志采集通道**；唯一被证明可用的是"拍照 + 停留时长"，
+   而它受**滚动窗口**与**静默窗口**双重限制（§2.8）。
+3. ⇒ 由此确立 §4.1 的新排序判据：**优先选择"决定性结果落在 OpenCore 日志里"的实验**，
+   也就是 **候选 B**（§4.6）。
+4. **U1（`_CRS` 实测窗口）本轮无法解决** —— 原打算靠候选 A 的日志来读，现在这条路断了；
+   U1 保持未决（§2.7）。

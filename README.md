@@ -232,19 +232,58 @@ AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
 回滚：`D:\_backup-round0\config.plist.round3`。
 
 **实测结果**（`logs/opencore-2026-10-13-095517.txt`）：日志侧 **7 项全部符合预期** ——
-`WRUNPROT 0 / RBMAP 1 / VMAP 1 / RTPERMS 1 / DEVMMIO 1 / MAT support is 1`、
-`MBA:OUT` 无 `npci`、四个 VoodooI2C 条目仍不注入。**仍然没有进入 Recovery。**
+`WRUNPROT 0 / RBMAP 1 / VMAP 1 / RTPERMS 1 / DEVMMIO 1 / MAT support is 1`
+（日志 `12:484 OC: Prelinked status - Success`，21 条 kext 注入全部 `- Success`）、
+`MBA:OUT` 无 `npci`、四个 VoodooI2C 条目仍不注入。
+
+> ### Round 4 正式结论（已定稿）
+>
+> **配置生效，内核启动未成功，已确认 ≥10 分钟无新屏幕输出。**
+>
+> 实机操作者确认：在下面两行连续停留 **>10 分钟**，屏幕无新输出，**未进入 macOS Recovery**：
+> ```text
+> [ PCI configuration begin ]
+> [IOPCIConfigurator::configure()] PCI configuration PCI0
+> ```
+> 同一次启动在此之前已出现 `RTC:`、`AppleCredentialManager`、`AppleKeyStore`、`AppleSSE`、
+> `CoreAnalyticsHub`。（照片文件仍未提供，故屏幕内容记为**操作者确认陈述**；**时长已确认**。）
+
+> **两条必须同时成立的限制**
+>
+> 1. **屏幕停点是"结构性"的**：`IOPCIConfigurator.cpp` 在 `:3342` 调
+>    `setConsoleInfo(0, kPEDisableScreen)` **之后**才执行 `doConfigure()`，而
+>    `[ PCI configuration end ]` 在屏幕重新开启**之后**才打印。所以严格可得的结论只有
+>    **"≥10 分钟没出现 `PCI configuration end` ⇒ `configure()` 没走到 `:3388`"** ——
+>    这**不等于**证明内部死锁，也**不能**指出停在哪台 PCI 设备。
+> 2. **控制台会滚动，屏幕上只有最后约 40 行**（Round 2 照片顶端可见行已是
+>    `ACPI: sleep states S4 S5`）⇒ 停在 PCI 的那类引导里，**早期的 ACPI 失败计数读不到**。
 
 > **本轮最重要的新事实**：Round 2（`MBA:OUT` 里**有** `npci=0x2000`，`WRUNPROT 1/RBMAP 0/RTPERMS 0`）
-> 与 Round 4（**无** `npci`，`0/1/1`）**停在完全相同的两行**：
-> `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`。
-> ⇒ 在**这个**停点上，`npci=0x2000` 与这组 MAT 组合**都不足以移动停点**；
-> **不能**排除它们的其它作用，也**不能**据此锁定任何子系统。详见
-> [受控实验记录](docs/05-受控实验记录.md) §7.10 / §7.11。
+> 与 Round 4（**无** `npci`，`0/1/1`）**最后可见行完全相同**。
+> ⇒ 在这个停点上，`npci=0x2000` 与这组 MAT 组合**都不足以**让系统进入 Recovery；
+> 但**不能**因此说它们"对内核行为无影响"（两轮**内部**停点是否相同**无法证明**）。
+> 详见 [受控实验记录](docs/05-受控实验记录.md) §7.10 / §7.11。
 
-**执行后即停止** —— 未获批准**不执行 Round 5**，**不**额外修改 MMIO 白名单、ACPI、IOMMU、
-`npci`、BAR 或其它 kext。Round 5 候选（含"先打开 PCI 日志，再做单变量"的排序）见
-**[docs/06-只读分析与Round5候选.md](docs/06-只读分析与Round5候选.md)**。
+> **Round 3 的观测保留**：实机操作者确认 Round 3 曾在
+> `RTC: Only single RAM bank (128 bytes)` 处停留 ≥10 分钟无新输出。
+> 该事实**不改写**；Round 4 在同样没有 `npci` 的情况下出现了后续 PCI 日志，
+> ⇒ **不同轮次执行结果存在差异，目前无法解释**（只能说 `RTC:` 不一定是稳定复现的独立根因）。
+
+**⛔ 执行后即停止** —— 未获批准**不执行 Round 5**，**不**修改 MMIO 白名单、ACPI、IOMMU、
+`npci`、BAR 或其它 kext。
+
+**Round 5 唯一推荐候选**（详见 [docs/06](docs/06-只读分析与Round5候选.md) §4.6 与 §7）：
+**单独把 `Booter → Quirks → DevirtualiseMmio` 从 `true` 改成 `false`**，其余一概不动。
+候选文件：[`efi/candidates/round5B-devirtualisemmio-false.plist`](efi/candidates/round5B-devirtualisemmio-false.plist)
+（`ocvalidate` 1.0.9 → No issues found；与卡上相比**只有 1 行**不同，1-based 行号 **171**）。
+
+> **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
+> 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
+> 而 macOS 15.6 时代的 tag（≤ `681.140.3`，2025-08-20）**全都没有**；
+> 本项目此前引用的本地源码 **sha256 与 `IOPCIFamily-726.0.5` 逐字节相同**，
+> 即被误当成了 15.6 的代码。⇒ 在实机上追加 `pci_log=…` 是**空操作**，
+> 该候选**已撤销**。同时确认本机**没有**串口 / `kdp` / 任何"硬卡死后仍能取回内核输出"的通道，
+> 唯一可用的采集方式仍是**拍照 + 停留时长**。完整审计见 docs/06 §7。
 
 **本轮只读作业的三条硬结论**（完整证据见 `docs/06`）：
 

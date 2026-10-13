@@ -11,7 +11,7 @@
 
 | 候选 | 相对卡上状态 | 状态 |
 |---|---|---|
-| *（当前无待批准候选）* | — | — |
+| [`round5B-devirtualisemmio-false.plist`](round5B-devirtualisemmio-false.plist) | `Booter.Quirks.DevirtualiseMmio`：`true` → `false`（**仅此 1 行**，1-based 行号 171） | **待批准**（Round 5 唯一候选，见 `docs/06` §4「候选 B」与 §4.6） |
 
 > `round4-mat-triple.plist` 已于获批后**写入卡上**，因此转正为 `efi/config.plist` 并从本目录移除。
 > 其改动（3 行，`EnableWriteUnprotector` / `RebuildAppleMemoryMap` / `SyncRuntimePermissions`）
