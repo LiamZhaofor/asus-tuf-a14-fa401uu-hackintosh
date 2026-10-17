@@ -248,10 +248,13 @@ def main(argv):
     print("  objects / blobs  : %d / %d" % (len(oid_path), len(blobs)))
     print("  needle kinds     : %s" % ", ".join(sorted({k for k, _ in secrets})))
     print("  blob hits        : %d" % len(hits))
+    print("    full plain UUID        : %d blob(s)" % sum(1 for h in hits if "FULL SystemUUID (plain)" in h.get("class", [])))
+    print("    full byte-swapped UUID : %d blob(s)" % sum(1 for h in hits if "FULL SystemUUID (byte-swapped, as OpenCore prints it)" in h.get("class", [])))
+    print("    prefix only (8 chars)  : %d blob(s)" % sum(1 for h in hits if "PREFIX ONLY (8 chars)" in h.get("class", [])))
     for h in hits:
-        print("    - %s  kinds=%s  commits=%d  in HEAD history=%s"
-              % (h["path"] or "(no path)", ",".join(h["kinds"]), len(h["commits"]),
-                 h["reachable_from_head"]))
+        print("    - %s" % (h["path"] or "(no path)"))
+        print("        class  : %s" % "; ".join(h.get("class", [])))
+        print("        commits: %d   in HEAD history=%s" % (len(h["commits"]), h["reachable_from_head"]))
         for c in h["commits"][:6]:
             print("        commit %s" % c[:12])
         if len(h["commits"]) > 6:
