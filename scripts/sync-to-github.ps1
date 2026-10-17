@@ -81,7 +81,8 @@ else { Ok "efi/config.plist updated  $($before.Substring(0,16))... -> $($after.S
 # in place first: they are also what a stale-but-published log leaked last time.
 $logs = @(Get-ChildItem (Join-Path $repo 'logs') -Filter 'opencore-*.txt' -ErrorAction SilentlyContinue)
 foreach ($l in $logs) {
-    $out = & $python (Join-Path $repo 'scripts\scrub-log.py') $l.FullName 2>&1 | Out-String
+    # forward the stick path: the card may enumerate under E: or F:, not only D:
+    $out = & $python (Join-Path $repo 'scripts\scrub-log.py') $l.FullName '--stick' $StickConfig 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) { Write-Host $out; throw "scrub-log.py failed on $($l.Name) - refusing to publish" }
     Write-Host ("    " + $out.Trim())
 }

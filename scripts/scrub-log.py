@@ -3,10 +3,15 @@
 """Redact identity values from an OpenCore boot log so it is safe to publish.
 
 Usage:
-    python scrub-log.py <in.txt> [out.txt]
+    python scrub-log.py <in.txt> [out.txt] [--stick <path-to-config.plist>]
 
-The real values are read from the live stick config (D:\\EFI\\OC\\config.plist) so the
-script itself contains no secrets, and it redacts BOTH forms of each value:
+The real values are read from the live stick config so the script itself contains no
+secrets. The path defaults to D:\\EFI\\OC\\config.plist but **must be passed explicitly
+when the stick enumerates under another drive letter** (e.g. --stick E:\\EFI\\OC\\config.plist,
+or the SCRUB_STICK_CONFIG environment variable). `sync-to-github.ps1 -StickConfig <path>`
+forwards its value here, so the two never disagree.
+
+It redacts BOTH forms of each value:
 
   * SMBIOS serial / MLB / UUID as written into NVRAM
   * the UUID **byte-swapped** - OpenCore prints system-id with the first three GUID
@@ -24,7 +29,17 @@ import os
 import re
 import sys
 
-STICK = r"D:\EFI\OC\config.plist"
+STICK_DEFAULT = r"D:\EFI\OC\config.plist"
+
+
+def resolve_stick(argv):
+    """--stick <path>, else $SCRUB_STICK_CONFIG, else the default D: path."""
+    for i, a in enumerate(argv):
+        if a == "--stick" and i + 1 < len(argv):
+            return argv[i + 1]
+        if a.startswith("--stick="):
+            return a.split("=", 1)[1]
+    return os.environ.get("SCRUB_STICK_CONFIG") or STICK_DEFAULT
 
 PLACEHOLDER = {
     "rom": "<rom-redacted>",
@@ -35,8 +50,14 @@ PLACEHOLDER = {
 }
 
 
-def read_identity():
-    with open(STICK, "rb") as fh:
+def read_identity(stick=STICK_DEFAULT):
+    if not os.path.exists(stick):
+        raise SystemExit(
+            "stick config not found: %s\n"
+            "  the card may enumerate under another drive letter; pass --stick <path>\n"
+            "  (sync-to-github.ps1 does this automatically from its -StickConfig value)"
+            % stick)
+    with open(stick, "rb") as fh:
         text = fh.read().decode("utf-8", "replace")
     out = {}
     for key, name in (("SystemSerialNumber", "ssn"), ("MLB", "mlb"), ("SystemUUID", "uuid")):
@@ -68,13 +89,16 @@ def swap_guid(u):
 
 
 def main(argv):
+    stick = resolve_stick(argv)
+    argv = [a for i, a in enumerate(argv)
+            if a != "--stick" and (i == 0 or argv[i - 1] != "--stick") and not a.startswith("--stick=")]
     if not 1 <= len(argv) <= 2:
         print(__doc__)
         return 2
     src = argv[0]
     dst = argv[1] if len(argv) == 2 else src
 
-    ident = read_identity()
+    ident = read_identity(stick)
     out = open(src, "r", encoding="utf-8", errors="replace").read()
     before = out
 
