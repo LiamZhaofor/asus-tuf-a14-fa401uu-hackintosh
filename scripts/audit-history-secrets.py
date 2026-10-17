@@ -186,6 +186,23 @@ def main(argv):
         if found:
             hits.append({"oid": oid, "path": oid_path.get(oid, ""), "kinds": sorted(set(found))})
 
+    # ---- classify each hit: full plain UUID / full byte-swapped UUID / prefix only / other
+    FULL_PLAIN = {"SystemUUID"}
+    FULL_SWAPPED = {"SystemUUID (byte-swapped, as OpenCore prints it)"}
+    PREFIX_ONLY = {"SystemUUID first 8 chars", "SystemUUID (byte-swapped) first 8 chars"}
+    for h in hits:
+        k = set(h["kinds"])
+        cls = []
+        if k & FULL_PLAIN:
+            cls.append("FULL SystemUUID (plain)")
+        if k & FULL_SWAPPED:
+            cls.append("FULL SystemUUID (byte-swapped, as OpenCore prints it)")
+        if (k & PREFIX_ONLY) and not (k & (FULL_PLAIN | FULL_SWAPPED)):
+            cls.append("PREFIX ONLY (8 chars)")
+        if k - (FULL_PLAIN | FULL_SWAPPED | PREFIX_ONLY):
+            cls.append("OTHER: " + ", ".join(sorted(k - (FULL_PLAIN | FULL_SWAPPED | PREFIX_ONLY))))
+        h["class"] = cls
+
     # ---- commit messages
     log = git(repo, "log", "--all", "--format=%H%x1f%B%x1e")
     msg_hits = []

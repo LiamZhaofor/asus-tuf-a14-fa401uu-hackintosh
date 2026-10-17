@@ -506,17 +506,23 @@ MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 Voodoo
 > 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §10 / §11 / §12 与
 > [docs/05](docs/05-受控实验记录.md) §7.20。
 >
-> 🆕 **Round 9 候选（只给设计，未写入、未执行）**：见
-> [docs/10-Round9候选实验设计.md](docs/10-Round9候选实验设计.md)。
-> 一句话：**单变量给 boot-args 追加 `pci-workloop-timeout-ms=2000`** ——
-> 给 IOPCIConfigurator 的工作环装一个 2 s 看门狗（`IOWorkLoop::setMaximumLockTime`），
-> 把"静默卡 ≥10 分钟"强制变成**数秒内可判读的事件**：
-> **要么拿到指名道姓的栈（停在 gated 配置空间/链路动作里）**，
-> **要么排除这一整类（停在非 gated 的枚举/分配逻辑里）**。
-> 已核实该 boot-arg **存在于 `IOPCIFamily-681.140.3`（macOS 15.6 那份源码）**，
-> 不依赖任何"726 才有"的东西；停点也已在 681 的 `configure()` 里夹定在
-> `:3360 doConfigure()` 与 `:3402 "[ PCI configuration end … ]"` 之间。
-> **风险低、可回滚（只改 boot-args 字符串）**，预登记 α/β/γ 三态判据。
+> ⛔ **Round 9 原候选已撤销**（2026-10-17 审核）：`pci-workloop-timeout-ms` **不能**把静默卡死变成可判读事件 ——
+> ① `setMaximumLockTime(…, 0)` 不含 `kTimeLockPanics`，最多 `OSReportWithBacktrace()`，**不是 panic**；
+> ② `lockTime()` 只在 `openGate()`/`sleepGate()` 里调用，**永不返回的动作永远不会被测到**；
+> ③ 该机制整体受 `#if IOKITSTATS` 编译开关控制；
+> ④ **`IOPCIConfigurator.cpp` 全文对 `_configWorkLoop` 零引用** ⇒ 初始 `doConfigure()` **不在工作环里**。
+> **判定：信息增益不足，不写入、不执行。**
+>
+> ✅ **新首选方案（零 EFI 改动）**：**USB4 隧道端口枚举对照** ——
+> 先**只读**证明插入 USB4/TB 设备确实改变枚举集合（0-α / 0-β / 0-γ 判据），再决定是否做两次引导对照。
+> 若新设备落在某条总线上，那条总线号还可能**直接证实或证伪** GP11 的 `0x05–0x64` 预测。
+> 观测渠道的诚实结论：**本机没有能在 `doConfigure()` 内部取证的内核日志通道**
+> （无串口、kdp 不可用、屏幕在该函数内被关闭；`ApplePanic → OpenCore 日志` 通道存在，但只在真 panic 后才产出）。
+> 详见 [docs/10](docs/10-Round9候选实验设计.md)。
+>
+> 🔐 **历史泄漏的处置方案（仅方案）**：审计分类为 **完整明文 UUID 0 / 字节序变换 4 / 仅前缀 1**；
+> 因此准备 [仅轮换 SystemUUID 的独立方案](docs/11-SystemUUID仅轮换方案.md) ——
+> **不换**序列号/MLB/ROM，**不改写历史**、**不 force-push**。
 
 > **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
 > 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
@@ -607,7 +613,8 @@ docs/06-只读分析与Round5候选.md    ★ 只读 ACPI/PCI 分析、上游案
 docs/07-上游案例复核与Round6候选.md ★ Round 5B 结案与回滚、Acer 案例复核、IOPCIFamily-681 标志位、1401 版本策略对比、Round 6 候选
 docs/08-RTX4050-BAR与PCI资源审计.md  ★ RTX 4050 BAR1 专项（BDF/地址/尺寸/RBAR 解码/读回手段）、PCI root bridge 与 _CRS 审计、Round 7 定稿、Round 8 Windows 侧 PCI 拓扑与资源只读审计
 docs/09-Linux-Live只读采集方案.md   ★ Linux Live 只读采集预案（桥寄存器级证据；按条件执行，本轮未执行）
-docs/10-Round9候选实验设计.md       ★ Round 9 唯一候选：单变量 `pci-workloop-timeout-ms`（把静默卡死变成可判读事件；未写入、未执行）
+docs/10-Round9候选实验设计.md       ★ Round 9 撤销与重规划：四条判据作废 + 观测渠道清单 + 新首选（USB4 枚举对照，零 EFI 改动）
+docs/11-SystemUUID仅轮换方案.md      ★ 历史泄漏处置：分类结果（完整 UUID 4 blob）+ 仅轮换 SystemUUID 的影响评估（仅方案）
 audit/                           只读审计脚本 + 脱敏结果（什么入库/什么绝不入库见 audit/README.md）
 hardware/本机配置摘要.md           脱敏后的硬件清单
 efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）

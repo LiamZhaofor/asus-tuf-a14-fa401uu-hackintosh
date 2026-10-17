@@ -75,7 +75,7 @@ python audit\pci-resource-audit.py <1401>\plan.json
 
 | 结果 | 内容 |
 |---|---|
-| **命中 5 处** | **全部是 `SystemUUID` 形态**（含 OpenCore 打印的字节序变换形式与 8 字符前缀），**不涉及** 序列号 / MLB / ROM-MAC / NVMe 序列号 |
+| **命中 5 处（已按形态分类）** | **完整明文 `SystemUUID`：0 个 blob**；**完整字节序变换 UUID（OpenCore 打印形式）：4 个 blob**；**仅 8 字符前缀：1 个 blob**；序列号 / MLB / ROM-MAC / NVMe 序列号：**0** |
 | 涉及路径 | `logs/opencore-2026-10-12-233441.txt`、`-235506`、`logs/opencore-2026-10-13-001004.txt`、`-002330`（**历史版本**；当前版本已脱敏）、以及 `docs/05-受控实验记录.md` |
 | 涉及提交 | `ea104b90`、`d4b01172`、`e8c329b6`（均仍可从 HEAD 历史到达 ⇒ 已在公开历史中） |
 | 提交信息 | **0 命中** |
