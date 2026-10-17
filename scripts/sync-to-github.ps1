@@ -105,7 +105,13 @@ else {
 
 # ------------------------------------------------------------------ 3. leak scan
 Step 3 "leak scan (real identity values read from the stick, never printed)"
+# FAIL CLOSED: the scan is only meaningful if every identity field was actually read. A partial
+# read (or a config that belongs to a different disk) would scan for the wrong values and pass.
+if (-not (Test-Path $StickConfig)) { throw "REFUSING TO PUBLISH - stick config not found: $StickConfig" }
 $stickText = Get-Content $StickConfig -Raw
+if ($stickText -notmatch '<key>PlatformInfo</key>') {
+    throw "REFUSING TO PUBLISH - $StickConfig is not an OpenCore config (no PlatformInfo)"
+}
 $secrets = @{}
 foreach ($key in @('SystemSerialNumber', 'MLB', 'SystemUUID')) {
     $m = [regex]::Match($stickText, "<key>$key</key>\s*<string>([^<]+)</string>")
@@ -113,6 +119,18 @@ foreach ($key in @('SystemSerialNumber', 'MLB', 'SystemUUID')) {
 }
 $m = [regex]::Match($stickText, '<key>ROM</key>\s*<data>\s*([^<\s]+)\s*</data>')
 if ($m.Success) { $secrets['ROM'] = $m.Groups[1].Value.Trim() }
+foreach ($k in @('SystemSerialNumber', 'MLB', 'SystemUUID', 'ROM')) {
+    if (-not $secrets.ContainsKey($k) -or [string]::IsNullOrWhiteSpace($secrets[$k])) {
+        throw "REFUSING TO PUBLISH - identity field '$k' is missing or empty in $StickConfig; a partial identity set cannot prove the repository is clean"
+    }
+}
+# a fixed disk holding an unrelated config would silently give the wrong identity set: warn loudly
+try {
+    $vol = Get-CimInstance Win32_LogicalDisk -Filter ("DeviceID='" + $StickConfig.Substring(0, 2) + "'") -ErrorAction Stop
+    if ($vol -and $vol.DriveType -ne 2) {
+        Write-Host ("  WARN volume {0} reports DriveType={1} (2 = removable). Confirm this really is the hackintosh card." -f $vol.DeviceID, $vol.DriveType) -ForegroundColor Yellow
+    }
+} catch { }
 
 # The ROM blob is the NIC MAC as raw bytes; also look for the other renderings.
 if ($secrets.ContainsKey('ROM')) {

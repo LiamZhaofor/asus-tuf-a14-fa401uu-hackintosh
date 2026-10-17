@@ -50,15 +50,29 @@ PLACEHOLDER = {
 }
 
 
+REQUIRED_IDENTITY = ("ssn", "mlb", "uuid", "rom_colon")
+
+
 def read_identity(stick=STICK_DEFAULT):
+    """Read the four SMBIOS identity values. FAIL CLOSED: a config that does not carry all
+    four is rejected rather than silently scrubbing with a partial (or foreign) identity set,
+    which would let a real value survive the check."""
     if not os.path.exists(stick):
         raise SystemExit(
-            "stick config not found: %s\n"
+            "REFUSING TO RUN - stick config not found: %s\n"
             "  the card may enumerate under another drive letter; pass --stick <path>\n"
-            "  (sync-to-github.ps1 does this automatically from its -StickConfig value)"
+            "  (sync-to-github.ps1 does this automatically from its -StickConfig value)\n"
+            "  there is deliberately NO fallback to a default path: a config belonging to a\n"
+            "  different disk would produce the wrong identity set and no leak would be found."
             % stick)
     with open(stick, "rb") as fh:
         text = fh.read().decode("utf-8", "replace")
+
+    # sanity: this must look like an OpenCore config, not an arbitrary plist
+    if "<key>PlatformInfo</key>" not in text:
+        raise SystemExit("REFUSING TO RUN - %s has no <key>PlatformInfo</key>; "
+                         "that is not an OpenCore config" % stick)
+
     out = {}
     for key, name in (("SystemSerialNumber", "ssn"), ("MLB", "mlb"), ("SystemUUID", "uuid")):
         m = re.search(rf"<key>{key}</key>\s*<string>([^<]+)</string>", text)
@@ -67,10 +81,23 @@ def read_identity(stick=STICK_DEFAULT):
     m = re.search(r"<key>ROM</key>\s*<data>\s*([^<\s]+)\s*</data>", text)
     if m:
         import base64
-        raw = base64.b64decode(m.group(1).strip())
+        try:
+            raw = base64.b64decode(m.group(1).strip())
+        except Exception as exc:
+            raise SystemExit("REFUSING TO RUN - ROM is not valid base64 in %s (%s)" % (stick, exc))
+        if len(raw) < 6:
+            raise SystemExit("REFUSING TO RUN - ROM is %d bytes in %s; expected at least 6"
+                             % (len(raw), stick))
         out["rom_hex"] = raw.hex().upper()
         out["rom_colon"] = ":".join(f"{b:02X}" for b in raw)
         out["rom_dash"] = "-".join(f"{b:02X}" for b in raw)
+
+    missing = [k for k in REQUIRED_IDENTITY if not out.get(k) or not str(out[k]).strip()]
+    if missing:
+        raise SystemExit(
+            "REFUSING TO RUN - %s is missing real identity field(s): %s\n"
+            "  publishing after a partial read could let a real value through, so this is fatal."
+            % (stick, ", ".join(missing)))
     return out
 
 

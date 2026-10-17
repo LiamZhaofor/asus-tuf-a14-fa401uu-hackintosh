@@ -1135,7 +1135,7 @@ I/O 分支甚至显式写了 `LEN1 = (MAX1 - MIN1) + One`，见 `:2446-2447`）�
 
 | 想拿的东西 | 能否拿到 | 为什么 / 试过什么 |
 |---|---|---|
-| 桥的 **Primary/Secondary/Subordinate 总线号寄存器** | ❌ | 三条都已排除，且**归因已更正**（用户 2026-10-13 第 2 条）：① 不是设备属性，`DEVPKEY_Device_DeviceNumber/FunctionNumber` **本机不存在**；② **`CM_Get_Next_Res_Des` 在本机对所有调用形状都不返回 `CR_SUCCESS`** —— 把 `CM_Get_First_Log_Conf` 的句柄当 `rdResDes`（文档所载的"取第一个描述符"形式）时，`ForType = 0x00…0x41` **全部**返回 `CR_INVALID_FLAG (4)`，**32 位 `ULONG` 句柄声明与零初始化的指针宽度声明都试过**，传 `NULL` 同样返回 4（见 `audit/results/` 与 §12.4）；③ **但这不是"系统缺少资源枚举能力"**：注册表的 `BootConfig` / `BasicConfigVector` 已被完整读出并逐字节解码（§12），**其中根本没有任何 `CmResourceTypeBusNumber` 描述符** —— 25 个有 `LogConf` 的设备里 **0 个**。⇒ **Windows 不记录这个值**，与用哪个 API 无关。只能**派生**：primary = 桥自己的 `BusNumber`；secondary/subordinate = 从其**已枚举子设备**的总线推。**派生值区分不了"桥声明的范围比它用的宽"**；无子设备的桥 = **未知**（不是"空"）|
+| 桥的 **Primary/Secondary/Subordinate 总线号寄存器** | ❌ | 三条都已排除（**归因已两次更正**）：① 不是设备属性，`DEVPKEY_Device_DeviceNumber/FunctionNumber` **本机不存在**；② **CfgMgr32 探针上一版有 bug**（漏了 `CM_Get_Next_Res_Des` 的第 5 个 `ulFlags` 参数、且把 `RESOURCEID` 当 `CM_RESOURCE_TYPE` 用）—— **修好后调用全部成功**（§12.4），**而 GP11/GPP0 的 `BusNumber(0x06)` 计数仍是 0**，只有根总线有 1 条（`0x00–0xFF`）；③ 注册表 `BootConfig`/`BasicConfigVector` 里同样 **0 条** BusNumber（25 个设备）。⇒ **Windows 只记录根总线的总线号，不记录 P2P 桥的**，与用哪个 API 无关。只能**派生**：primary = 桥自己的 `BusNumber`；secondary/subordinate 从其**已枚举子设备**推。**派生值区分不了"桥声明的范围比它用的宽"**；无子设备的桥 = **未知**（不是"空"）|
 | 桥的 **Memory / Prefetchable Base·Limit 寄存器** | ⚠️ 只有代理 | 配置空间不可读；`BootConfig`（§12）给出**固件交接时**的窗口，含**可预取位**（`0x04`）；P2 给出 Windows 当前分配。两者都是**解码结果**，不是寄存器原值：**从未被分配的窗口无法从它们反推**，寄存器的**对齐/粒度**位不可见 |
 | **PCI Command (0x04) / Status (0x06)** | ❌ | 无属性暴露；只有 `DEVPKEY_PciDevice_*` 能力位（已全部采集） |
 | 每个 **BAR 的原始内容与 size 编码** | ⚠️ 只有代理 | 只有 base+length；**不给 BAR 序号**；`DEVPKEY_PciDevice_BarTypes` 给类型位 |
@@ -1214,23 +1214,44 @@ I/O 分支甚至显式写了 `LEN1 = (MAX1 - MIN1) + One`，见 `:2446-2447`）�
   20/25 份需求清单同样零残余（其余 5 份是"多备选清单"的设备，
   第二清单尾部有 32 B 未被本解析器覆盖，已在结果文件里标 `self_consistent=false`）。
 
-### 12.2 ⚠️ `MemoryLarge`（Type 7）的 `Length` 字段是 **length ÷ 256**（本轮核对出的关键规则）
+### 12.2 ⚠️ `MemoryLarge`（Type 7）的长度按 **LARGE40/48/64 标志**解码（本轮修正）
 
-**证据（本机三条，互相独立）**：
+> **上一版这里写的是"长度 = 字段 × 256"，那只对 `LARGE40` 成立。** 正确规则来自 `wdm.h`：
+>
+> | 标志位 | 含义 | 还原 |
+> |---|---|---|
+> | `CM_RESOURCE_MEMORY_LARGE_40` = `0x0200` | 40 位长度，字段存 bits 39:8 | `length = raw << 8` |
+> | `CM_RESOURCE_MEMORY_LARGE_48` = `0x0400` | 48 位长度，字段存 bits 47:16 | `length = raw << 16` |
+> | `CM_RESOURCE_MEMORY_LARGE_64` = `0x0800` | 64 位长度，字段存 bits 63:32 | `length = raw << 32` |
+> | 三位都没置 | 无法判定 | **报 `ambiguous`，绝不猜**（工具会明确标注，且禁止据此下结论） |
+>
+> 同一约定也适用于需求描述符的 **`Alignment`** 字段（`Length40/Alignment40` 等）。
+> `audit/pci-logconf-audit.py` 现按标志位取 shift，并有 **11 项 `--selftest`**
+> （40/48/64 三种、无标志时的 ambiguous、Type 3 对照、尾部描述符、截断必须抛错、
+> Alignment 缩放、BusNumber 96 条），全部通过。
 
-| 设备 | Type 7 条目 | 原始字段值 | ×256 之后 | 独立来源 |
+**证据（本机三条，互相独立；全部 `flags = 0x0244`，含 `LARGE40` ⇒ shift 8）**：
+
+| 设备 | Type 7 条目 | 原始字段值 | `<<8` 之后 | 独立来源 |
 |---|---|---|---|---|
 | RTX 4050 BAR1 | `0x7C00000000` | `0x2000000` | **`0x200000000` = 8 GiB** | 1401 采集 = 8 GiB；`nvidia-smi` BAR1 = 8192 MiB；OpenCore 读到的 RBAR size index **13 = 8 GiB** |
-| GPP0 可预取窗口 | `0x7C00000000` | `0x2020000` | **`0x202000000` = 8 GiB + 32 MiB** | 1401 采集 = 8623489048…（`0x202000000`） |
+| GPP0 可预取窗口 | `0x7C00000000` | `0x2020000` | **`0x202000000` = 8 GiB + 32 MiB** | 1401 采集 = 8623489024 |
 | GP11 可预取窗口 | `0x6C00000000` | `0x10000000` | **`0x1000000000` = 64 GiB** | 1401 采集 = 64 GiB |
 
 * **反证"不是普通字节字段"**：8 GiB = `0x200000000` 有 **33 位**。
-  若该字段是 32 位**字节**长度，`0x200000000` 会**回绕成 0**；实测却是 `0x2000000` = 8 GiB ÷ 256。
+  若该字段是 32 位**字节**长度，会**回绕成 0**；实测是 `0x2000000`。
 * **对照（同一台设备、同一个数值）**：RTX 4050 的 **BAR3**（**Type 3**，普通字节语义）
-  也读作 `0x2000000`，而它**真的是 32 MiB**。
-  ⇒ **同一数值 `0x2000000`：Type 3 = 32 MiB，Type 7 = 8 GiB。**
-  比例差异是**类型相关**的，不是误读。
+  也读作 `0x2000000`，而它**真的是 32 MiB**
+  ⇒ 同一数值在 Type 3 是 32 MiB、在 Type 7（`LARGE40`）是 8 GiB。缩放是**标志/类型相关**的。
 * Type 1（IO）与 Type 3（Memory）是**普通字节**，已用已知 BAR/窗口尺寸验证。
+* **⚠️ Alignment 更正**：GP11 的 `MemoryLarge` 需求里 `Alignment` 原始字段 = `1`，
+  按 `LARGE40` 还原为 **`0x100` = 256 字节**（上一版误报为 1）。
+* **⚠️ 完整解析率更正**：上一版 25 份需求清单里有 **5 份**尾部未解析（`self_consistent=false`）。
+  这 5 份的尾部各多 **1 条未被 `Count` 计入的描述符**（实测为 `MinVector=0`/
+  `MaxVector=0xFFFFFFFF` 的中断需求）。现在尾部被完整消费并标记为 `trailing`，
+  **25/25 全部逐字节自洽**；这 5 个设备是：`65:00.0`（780M）、`65:00.2`（PSP）、
+  `66:00.1`（NPU）、`67:00.5`（USB4 NHI）、`04:00.0`（NVMe）。
+  **在修正之前，这 5 份数据没有资格被用作结论** —— 本文件此前也没有用它们下结论。
 
 ### 12.3 GP11 的完整固件视图（解码结果，逐条）
 
@@ -1260,31 +1281,44 @@ I/O 分支甚至显式写了 `LEN1 = (MAX1 - MIN1) + One`，见 `:2446-2447`）�
 ⇒ **固件不仅"分配"了 64 GiB，它是"要求"64 GiB 且强制放在该地址** —— 这是**隧道端口**的特征，
 **不是**过度分配。与 §11.6 的 USB4 识别完全一致，并与 1401 的独立采集**逐位吻合**。
 
-### 12.4 CfgMgr32 的正确调用与结果（原生 x64 进程，只读）
+### 12.4 CfgMgr32 的正确调用与结果（原生 x64 进程，只读）— **已修正，探针现在能枚举**
 
-`audit/round8/brute-resdes.cs`（编译为**原生 x64** 进程，`Environment.Is64BitProcess = True`，
-`/platform:x64`）对 GP11 与 GPP0 各做了：
+> **⚠️ 上一版这里写的"`ForType` 扫遍 `0x00…0x41` 都不返回 `CR_SUCCESS`"是错的，
+> 错在本探针，不在 Windows。** 两处缺陷（均已修，见 `audit/cfgmgr-resdes-probe.cs` 头注释）：
+>
+> 1. **签名少了一个参数**：真实原型是
+>    `CM_Get_Next_Res_Des(PRES_DES prdResDes, RES_DES rdResDes, RESOURCEID ForType, PULONG pResType, ULONG ulFlags)`。
+>    旧代码只声明 4 个、**漏掉 `ulFlags`**，被调方把栈上的垃圾当 `ulFlags` ⇒ **每次都 `CR_INVALID_FLAG (4)`**。
+> 2. **`ForType`/`pResType` 用的是 `RESOURCEID` 值，不是 `CM_RESOURCE_TYPE`**。
+>    本机标定（扫遍候选值 + 与返回字节比对）：
+>    `Mem=0x01`、`IO=0x02`、`DMA=0x03`、`IRQ=0x04`、**`BusNumber=0x06`**、**`MemLarge=0x07`**，
+>    设备私有显示为 `0x8001`。旧代码按 `0x20` 找 BusNumber —— **值是 0x06**，所以找不到。
 
-| 项 | 结果 |
-|---|---|
-| `CM_Locate_DevNodeW` | `CR_SUCCESS (0)` |
-| `CM_Get_First_Log_Conf`，`BASIC(0)` / `ALLOC(2)` / `BOOT(3)` | **三种全部 `CR_SUCCESS`**，返回句柄（例：GP11 BASIC `0x00D6F510`） |
-| `CM_Get_Next_Res_Des`，**把 `LOG_CONF` 句柄当 `rdResDes`**（即用户指出的文档所载"取第一个描述符"形式），`ForType` 扫遍 **`0x00…0x41`**，**32 位 `ULONG` 句柄声明** | **`CR_SUCCESS` 一次都没有返回** |
-| 同上，改用**零初始化的指针宽度**句柄声明 | `cr = 4`（`CR_INVALID_FLAG`） |
-| `rdResDes = NULL`（两种声明） | `cr = 4` |
+补上这两点后，**同一台机器、同一批设备，调用全部成功**（原生 x64，`/platform:x64`）：
 
-**必须同时记录的更正（用户第 2 条）**：
+| 设备 | conf | 描述符总数 | Mem | IO | IRQ | **BusNumber** | MemLarge |
+|---|---|---|---|---|---|---|---|
+| **GP11** `00:03.1`（USB4 隧道端口） | BASIC | 7 | 1 | 1 | 1 | **0** | 1 |
+| GP11 | ALLOC | 7 | 1 | 1 | 1 | **0** | 1 |
+| GP11 | BOOT | 3 | 1 | 1 | 0 | **0** | 1 |
+| **GPP0** `00:01.1` | BASIC / ALLOC | 7 | 1 | 1 | 1 | **0** | 1 |
+| **PCI0 根总线** `ACPI\PNP0A08` | BASIC / ALLOC / BOOT | 32 | 5 | 4 | 0 | **1** | 1 |
 
-* 上述失败**不再**被归因于"系统缺少 `CM_Get_First_Res_Des`"。
-  准确表述是：**本次会话里我们构造得出的调用形状都没能让 `CM_Get_Next_Res_Des`
-  返回 `CR_SUCCESS`**；`CM_Get_First_Res_Des` 在本机 `cfgmgr32.dll` 未导出，
-  但**它既不是唯一途径、也不能用来推断系统缺少资源枚举能力**。
-* **真正重要的是：这个枚举能力（以及更好的东西）拿到了** ——
-  句柄虽然没能走通，但**同样的描述符数据在注册表 `LogConf` 里完整存在**，
-  且本轮**已把 `ALLOC`/`BASIC`/`BOOT` 三个语义层面里最关键的
-  `BootConfig`（固件交接）与 `BasicConfigVector`（需求）完整解码**（§12.1–12.3）。
-  1401 的 `pci_resources`（`ALLOC_LOG_CONF`）也已与它们交叉复核。
-* ⇒ **上一轮把"取不到"写成"API 不存在导致"是错的，已更正**（§11.7 同步改写）。
+* 返回的字节与注册表解码**逐值一致**：GP11 的 `0xC4000000–0xDBFFFFFF`(384 MiB, `0x43`)、
+  `0x6C00000000–0x7BFFFFFFFF`(64 GiB, `0x47`)、`0xA000–0xDFFF`(16 KiB, `0xA1`) 都能在
+  ALLOC/BOOT 的返回里原样找到。
+* **根总线确实有一条 BusNumber 描述符**（内容 `0xFF` / `0x100` ⇒ `0x00–0xFF`，256 条）。
+* **但 GP11 与 GPP0 在三种配置里 BusNumber 计数都是 0。**
+* ⇒ **结论（用正确调用得出，比上一版更强）**：
+  **Windows 只为根总线记录总线号，不为 P2P 桥记录** ——
+  所以 **GP11 的 `secondary=0x05` / `subordinate=0x64` 仍然只能是预测**，
+  这是"数据不存在"，不是"函数不存在"、也不是"本探针不会用"。
+* 句柄管理：`LOG_CONF` 句柄第一次作为 `rdResDes` 传入，随后每个返回的 `RES_DES` 用
+  `CM_Free_Res_Des_Handle` 释放，最后 `CM_Free_Log_Conf_Handle` 释放 LOG_CONF；
+  **未调用**任何 `CM_Modify_Res_Des` / `CM_Add_Res_Des` / `CM_Add_Empty_Log_Conf` /
+  `CM_Free_Res_Des` / `CM_Free_Log_Conf`。
+* ⇒ 上一版"归因于 API 不存在"和"调用形状都不成功"两句**均已作废**；
+  §11.7 已同步改写为现在这个结论。
 
 ### 12.5 最终判断：还有必要用 Linux Live 吗？
 
