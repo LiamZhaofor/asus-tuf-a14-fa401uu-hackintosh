@@ -6,9 +6,9 @@ Usage:
     python scrub-log.py <in.txt> [out.txt] [--stick <path-to-config.plist>]
 
 The real values are read from the live stick config so the script itself contains no
-secrets. The path defaults to D:\\EFI\\OC\\config.plist but **must be passed explicitly
-when the stick enumerates under another drive letter** (e.g. --stick E:\\EFI\\OC\\config.plist,
-or the SCRUB_STICK_CONFIG environment variable). `sync-to-github.ps1 -StickConfig <path>`
+secrets. **There is no default path**: the card enumerates under a different drive letter
+between sessions, so the path must always be supplied (`--stick <path>`, or the
+`SCRUB_STICK_CONFIG` environment variable). `sync-to-github.ps1 -StickConfig <path>`
 forwards its value here, so the two never disagree.
 
 It redacts BOTH forms of each value:
@@ -29,17 +29,24 @@ import os
 import re
 import sys
 
-STICK_DEFAULT = r"D:\EFI\OC\config.plist"
+# No default stick path on purpose: the card's drive letter changes between sessions and a
+# guessed path could read a config belonging to a different disk.
+STICK_DEFAULT = None
 
 
 def resolve_stick(argv):
-    """--stick <path>, else $SCRUB_STICK_CONFIG, else the default D: path."""
+    """--stick <path>, else $SCRUB_STICK_CONFIG, else None.
+
+    There is deliberately NO built-in default path: the card enumerates under a different
+    drive letter on different days (D:, E:, ...), and silently falling back to a guessed
+    path could read a config that belongs to another disk.
+    """
     for i, a in enumerate(argv):
         if a == "--stick" and i + 1 < len(argv):
             return argv[i + 1]
         if a.startswith("--stick="):
             return a.split("=", 1)[1]
-    return os.environ.get("SCRUB_STICK_CONFIG") or STICK_DEFAULT
+    return os.environ.get("SCRUB_STICK_CONFIG") or None
 
 PLACEHOLDER = {
     "rom": "<rom-redacted>",
@@ -53,10 +60,16 @@ PLACEHOLDER = {
 REQUIRED_IDENTITY = ("ssn", "mlb", "uuid", "rom_colon")
 
 
-def read_identity(stick=STICK_DEFAULT):
+def read_identity(stick=None):
     """Read the four SMBIOS identity values. FAIL CLOSED: a config that does not carry all
     four is rejected rather than silently scrubbing with a partial (or foreign) identity set,
     which would let a real value survive the check."""
+    if not stick:
+        raise SystemExit(
+            "REFUSING TO RUN - no stick config given.\n"
+            "  pass --stick <path to the card's EFI/OC/config.plist> (the drive letter changes);\n"
+            "  there is deliberately no default path, because guessing one could read a config\n"
+            "  that belongs to a different disk.")
     if not os.path.exists(stick):
         raise SystemExit(
             "REFUSING TO RUN - stick config not found: %s\n"
