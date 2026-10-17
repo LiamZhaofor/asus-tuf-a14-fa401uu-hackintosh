@@ -42,12 +42,12 @@
 | 层 | 影响 | 说明 / 需要核实的点 |
 |---|---|---|
 | **注入层** | `config.plist → PlatformInfo → Generic → SystemUUID` 被 OpenCore 写进 SMBIOS Type 1 的 UUID 字段 | 这是**唯一的改动点**；`ocvalidate` 会校验格式 |
-| **NVRAM** | 与 UUID 直接相关的**不是** NVRAM 键，而是 SMBIOS/`IOPlatformUUID`；但 macOS 可能在 NVRAM 里留下**派生的**身份记录（`boot-args` 无关） | ⚠️ **执行前必须逐项核实**：换 UUID 后 NVRAM 里是否残留旧值（例如 `4D1EDE05-…` 下的某些键、以及任何缓存了旧 UUID 的键）。**未核实前不得宣称"换完就干净"** |
+| **NVRAM** | **UUID 确实有直接对应的 NVRAM 变量**（此前本文件写"没有"是**错的**，已更正）：`Configuration.tex`（OpenCore `963025f`）明确 `SystemUUID` 会被写入 **`4D1EDE05-38C7-4A6A-9CC6-4BCCA8B38C14:system-id`**，且是**字节序变换**形式；本仓库配置 `PlatformInfo.Automatic/UpdateNVRAM/UpdateDataHub/UpdateSMBIOS = True`、`UpdateSMBIOSMode = Custom` ⇒ 这条写入是**生效的** | 见 §2.1：必须把 **OpenCore 注入 / 启动服务变量 / 固件持久变量 / 操作系统缓存** 分开看；**不得默认重启后必然残留**，也**不得未经核实就清 NVRAM** |
 | **Apple 服务（iCloud / iMessage / FaceTime / App Store）** | 设备标识的一部分改变 ⇒ 可能需要**重新登录/重新激活** | UUID 只是标识之一（序列号/MLB 也参与）；只换 UUID 通常在**首次登录**时表现为"新设备"，但**必须实测**，不能保证无感 |
 | **许可证 / 激活缓存 / 偏好** | 个别 App 以 `IOPlatformUUID` 做机器绑定 ⇒ 可能需要重新授权 | 需要在换之前列出受影响的自签/授权类软件 |
 | **现有引导基线** | 停点**不应**改变（UUID 与 PCI 初始化无关） | 换完仍应停在 `PCI configuration begin`/`PCI0`；**若停点变化，说明有别的变量被带进来了**，必须回滚 |
 | **Time Machine / 备份标识** | 机器标识变化可能使既有备份"看起来是另一台机器" | 仅影响后续备份的归属判断，不破坏数据 |
-| **Windows 侧** | 不受影响（Windows 不读 OpenCore 注入的 SMBIOS UUID） | — |
+| **Windows 侧** | ⚠️ **有条件**（此前写"不受影响"是**过强**的）：若 Windows 是**经 OpenCore 引导**的（即在 OpenCore 的启动项里选 Windows），它走的是**同一条 SMBIOS 注入路径**，因此**同样会看到被修改的 SMBIOS/UUID**；只有**直接从固件的 Windows Boot Manager 引导**，才绕开 OpenCore 的注入 | 执行前后需分别确认"这次 Windows 是从哪条路径起来的"，并记录；**不要**把"Windows 没出问题"当作"注入无效"的证据 |
 
 ---
 
@@ -91,3 +91,39 @@
 先完整备份（含 `.git`）、在**副本**上演练、确认所有协作者同步，再做；
 并且要接受一个事实：**已公开的内容无法撤回**，清理只是让仓库本身不再携带它。
 本仓库的审计脚本只做只读检测，**永远不会**自动执行这类操作。
+
+
+---
+
+## 7. 2026-10-17 更正记录（用户审核要求）
+
+### 7.1 已核实的事实（只读）
+
+* 仓库 `efi/config.plist`（Round 7 脱敏副本）中：`PlatformInfo.Automatic = true`、
+  `UpdateNVRAM = true`、`UpdateDataHub = true`、`UpdateSMBIOS = true`、`UpdateSMBIOSMode = Custom`。
+* `1401/ref/oc/Configuration.tex`（OpenCore `963025f`）：
+  * `L5827-5829`：该选项 **Sets `system-id` in … `SystemUUID` … `(with swapped byte order)`**；
+  * `L6260`：变量全名为 **`4D1EDE05-38C7-4A6A-9CC6-4BCCA8B38C14:system-id`**；
+  * `L5949`：`system-id` 变量**或** SMBIOS 会被"贯穿各节"使用；
+  * `L4343/L4372`：`SystemUUID` / `system-id` 的**前 8 字节**还被用作某个随机种子的替代来源
+    ⇒ **UUID 不只影响身份，还参与其它初始化输入**，改它可能带来**非身份类**的副作用。
+* ⇒ 因此：**"UUID 没有直接相关的 NVRAM 变量"这句话作废**，已在上表更正。
+
+### 7.2 必须分开的四层（不得混为一谈）
+
+| 层 | 内容 | 换 UUID 后的行为 | 需要怎么核实 |
+|---|---|---|---|
+| **OpenCore 注入** | 每次引导由 OpenCore 把 `PlatformInfo.Generic.SystemUUID` 写进 SMBIOS（并按 `UpdateSMBIOSMode=Custom` 处理），同时写 `system-id` | **每次引导都会被重新写** ⇒ 旧值不会"自然消失"，**也不会"自动变新"以外的残留** | 换完后用只读工具读 SMBIOS/变量，确认已是新值 |
+| **启动服务变量** | macOS 运行时可能写入的服务型 NVRAM 变量（与身份相关者） | 可能**保留**到下次引导，也可能被重写 | 逐项只读核对，**不预设** |
+| **固件持久变量** | OpenCore/固件写入并**跨引导保留**的变量 | **可能保留**旧值 | 必须在换之前**导出全量变量清单**，换后对比 |
+| **操作系统缓存** | macOS 侧的账户/服务缓存（iCloud、iMessage、许可证、`IOPlatformUUID` 绑定） | **不会**因为改 SMBIOS 自动失效 | 只能实测（重新登录/重新授权），并记录 |
+
+**⇒ 结论（写给将来执行的人）**：**不得**默认"重启后必然残留"，**也不得**未经核实就清 NVRAM
+（清 NVRAM 会连带清掉 `boot-args` 等，可能让机器**再也进不去当前实验状态**）。
+正确做法：**先导出全量变量清单 → 只改一个键 → 引导 → 再导出对比 → 逐项判断**。
+
+### 7.3 本轮的边界（再次确认）
+
+* 本轮**没有**生成、写入或轮换任何 UUID；**没有**清 NVRAM；**没有**改 `MLB`/序列号/`ROM`；
+  **没有**改写历史、**没有** force-push。
+* 卡上仍是 Round 7：`58E78A12C8102AF7A5DD3B2D7417BE891B17EFC78FF0817C99F69C6BC7A78CA3`。
