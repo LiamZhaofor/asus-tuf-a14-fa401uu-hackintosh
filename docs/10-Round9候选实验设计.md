@@ -685,12 +685,40 @@ BusNumber 描述符 **0**。
 | 最后两行 | `[ PCI configuration begin ]` → `[IOPCIConfigurator::configure()] PCI configuration PCI0` | **`[IOPCIConfigurator::configure()] PCI configuration PCI0`（前一行是 AppleVTD）** |
 
 按本仓库源码：`:3321` 那条 `configure()` 消息是 `IOLog` 且**无门控**；`[ PCI configuration begin ]` 是 `IOLog` 但**受 `bootConfig` 门控**。
-⇒ **若部署版 681.x 的门控与本仓库一致**，则本轮停在一次 **`bootConfig == 0` 的 `configure(0)` 调用**（`configOp()` 路径），
-而非 `addHostBridge()` 的启动配置 —— 这意味着**启动期 PCI 配置已经完成**。
 
-**这一条必须按"未证实"对待**，理由三条：
-1. 依赖"部署版内核门控与本仓库一致"，而本仓库已证明不是同一版本（banner 字段不同）；
-2. 只有**一次**观察，按本轮规定**不允许重复引导**验证；
-3. 存在"控制台滚动/绘制差异"这一平凡解释，无法排除。
+**⚠️ 2026-10-19 用户审核：由此推出的任何阶段判定一律撤销。**
+本节初稿曾写"若部署版门控与本仓库一致，则本轮停在一次 `bootConfig == 0` 的 `configure(0)` 调用，
+意味着启动期 PCI 配置已经完成"。**该推论已作废，不得引用**，理由：
+1. 依赖"部署版 681.x 的内核门控与本仓库一致"，而本仓库已证明**不是同一版本**（banner 字段更少）；
+2. 只有**一次**观察，且规定**不允许重复引导**验证；
+3. "控制台滚动/绘制差异"这一平凡解释无法排除。
 
-⇒ 因此**不得**把本轮写成"取得进展"；只能记为**"最后可见行发生了变化"**这一事实。
+⇒ 本轮**只登记两条事实**：① 未进入 Recovery；② 末屏最后可见行相对 Round 7 少了一行 `[ PCI configuration begin ]`。
+⇒ **不得**据此推断内核运行阶段、**不得**推断 PCI 配置是否完成、**不得**写成"取得进展"。
+
+### 10.6 登记口径与状态（用户 2026-10-19 审核裁定）
+
+**登记为：「符合 NullMoth 官方安装器配置，但未进入 Recovery」。**
+
+| 项 | 裁定 |
+|---|---|
+| 回滚 | **不回滚**。卡上保留 `UEFI.ResizeGpuBars = -1`、`Booter.ResizeAppleGpuBars = 0`（即 `021F02B3…`，52124 B） |
+| Round 7 原始备份 | **继续保留**（`efi-backups/round11-pre-20261019-200625/config.plist`，`58E78A12…`） |
+| BAR 参数 | **全面关闭该方向**：不再重复任何 `ResizeGpuBars` / `ResizeAppleGpuBars` 组合测试 |
+| 日志推断 | **禁止**用"最后一行日志"推断 PCI 配置已完成或任何运行阶段 |
+| 后续 | 转向**有直接证据支持**的其它启动兼容性问题；**未经批准不再改 EFI、不再做启动实验** |
+
+### 10.7 下一步候选：只列**直接观察到的**证据（不含 BAR，不提议动作）
+
+按"证据直接性"排序。每条都注明"能解释什么 / 不能解释什么"，避免又一次把噪声当根因。
+
+| # | 直接证据（可复现的观察） | 来源 | 能解释什么 | 不能解释什么 |
+|---|---|---|---|---|
+| **E1** | 内核每次打印 **`[AddMemoryRange()] AppleVTD is not yet installed as gSystem` ×4**，且就在 PCI 相关输出之前 | 屏幕照片（Round 6/7/10/11 均有） | **AppleVTD 在这台机器上从未安装成功**；同时配置里 `Kernel.Quirks.DisableIoMapper=false`、`DisableIoMapperMapping=false`，即系统在"有 IOMMU 映射意图"的状态下运行，而 mapper 缺席 | **不能**证明它就是停住的原因；缺 mapper 时 macOS 通常会退化为不映射，属"可能但未证" |
+| **E2** | **我们自己注入的 `SSDT-Disable_Network_GPP6` 加载失败**：`ACPI Exception: AE_ALREADY_EXISTS, (SSDT: DNET) while loading table` + `ACPI Error: [\_SB.PCI0.GPP6.WLAN._DSM] Namespace lookup failure` | 屏幕照片（`DNET` = 该表的 OEM 段） | 这张表**从未生效**，且在我们的配置里是**唯一由 EFI 控制、却能直接观察到出错的 ACPI 项**；它与固件自带的 `WLAN` SSDT 冲突 | **不能**解释启动失败 —— 三次加载失败之后内核仍继续跑到很晚（`AppleKeyStore`/`CoreAnalyticsHub` 等），所以它是**噪声源**而非阻断点 |
+| **E3** | OpenCore 每次交接到 **`EXITBS:START`** 后即停止写日志；日志尾部固定出现 `#[EB.LD.OFS|OPEN!] Err(0xE) <"usr\standalone\OS.dmg.root_hash">` 与 `#[EB.BST.FBS\|!] Err(0xE) <- EB.RH.LRH` | 12+ 份 OC 日志 | 这是 **boot.efi 阶段**的一个失败返回；第一方 `TROUBLESHOOTING.md:34` 认为它可能表示"盘由旧版 1401 生成、或恢复镜像与 macOS 版本不匹配" | **不能**定论：`docs/03` 既有判定认为"U 盘安装器无此文件属预期"。**两种读法都未被证伪** |
+| **E4** | SMBIOS = **`MacBookPro16,2`**（13" 机型，**无独显**） | 卡上配置 | 与第一方要求"能在 macOS 15 上跑且**有独显**的机型（测试过 `iMacPro1,1`）"**不符**；对后续 NullMoth 驱动阶段是硬前置 | **不能**解释当前"连 Recovery 都进不去"，因为安装阶段走固件帧缓冲，与 GPU 策略无关 |
+| **E5** | 固件自有表 `WLAN` / `GpMsSsdt` 因同名对象重定义而加载失败（`AE_ALREADY_EXISTS`） | 屏幕照片 | 华硕固件自身的 ACPI 不一致；Apple 的 ACPICA 20160930 不容忍重定义 | 不可通过 EFI 侧的**参数**修好（只能靠 ACPI 补丁，当前被禁止） |
+
+**当前唯一"可直接复现、且不违反任何禁令"的可疑项是 E1 与 E3**；E2 明确只是噪声；E4 属后续阶段。
+**本轮不提出任何动作**；若下一步需要挑一个，只能在你批准后、从 E1 / E3 中选**一个**并预先写明判据。
