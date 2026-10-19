@@ -395,35 +395,67 @@ BusNumber 描述符 **0**。
 | DeviceProperties `Pci(0x8,0x1)/Pci(0x0,0x6)` → `layout-id=56` | `1022:15E3` ACP 音频 | 实测位于 `0x66:00.6` ✅ |
 | `SSDT-Disable_Network_GPP6` | `\_SB.PCI0.GPP6.WLAN`（`Pci(0x2,0x2)`） | MT7922 仍在 bus `0x04`、父桥 `00:02.2` ⇒ 路径有效；但 `docs/03` 已证明该表因 `AE_ALREADY_EXISTS` **从未生效** |
 | `boot-args nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth` + `Drivers/NullMothLogo.efi` | NullMoth / NVIDIA 驱动 | **驱动未注入**：`Kexts/` 无 NVRM/NVRMFB/NMDRM，只有 logo 驱动；NullMoth `README.txt` 写明「**After macOS finishes installing**」才装驱动 ⇒ 这些参数当前**无消费者、纯惰性**，不是停点原因，但必须记住 |
-| `Booter.ResizeGpuBars=0` / `UEFI.ResizeGpuBars=0` | BAR | **当前是关闭的**。"BAR1 缩到 64 MiB 已在双阶段读回中验证"属历史轮次，**不是现在的卡上状态** |
+| `UEFI.Quirks.ResizeGpuBars=0` / `Booter.Quirks.ResizeAppleGpuBars=0` | GPU BAR | **⚠️ 初稿结论写反了，此处更正：`0` 表示「启用」，`-1` 才表示「禁用」**（OpenCorePkg `963025f`：`OpenCoreUefi.c:982-987` 与 `ServiceOverrides.c:1255-1259` 都以 `>= 0` 判定是否执行）。本轮日志自身即可证实：`OC: Setting GPU BARs to 0` → UEFI 阶段 `RBAR 2/3 supports 0x3FC0, sizing 0 inc 1 results setting from 13 to 6`，Apple 阶段 `inc 0 results setting from 6 to 6`。⇒ **RTX 4050 BAR1 的 8 GiB→64 MiB 双阶段缩容在 Round 7 是「生效且被读回验证」的当前状态，不是历史失效结论** |
 | `Misc.Debug.ApplePanic=true` | panic 落盘 | **已开启**；12 份 OC 日志每次都打印 `OC: Panic log does not exist`，`E:\` 下无 `panic-*.txt` ⇒ 通道被检查过，但从未命中 |
 
 ### 8.3 结论：**暂不具备值得冒险的 EFI 修改**（三条独立理由）
-1. **看得见的那行没有信息量** —— `docs/03` §2 新增块（含行号）证明屏幕在两条可见消息之后第 3 行即被关闭，
-   `doConfigure()` 全程处于遮挡区；且路径上所有等待共用一个 900 ms 预算，**等待无法区分"慢"与"停"**。
-2. **停点归属未定** —— `docs/03` §4：`[ PCI configuration begin ]` 出现在晚期 kext 之后，
-   (A) 首轮配置 / (B) 晚期重配置 两种解释并存且对策相反。**分辨之前改参数就是猜。**
+1. **看得见的那行没有信息量** —— `docs/03` §2：屏幕在两条可见消息之后第 3 行即被关闭，`doConfigure()` 全程遮挡；
+   且恢复屏幕那步在 `fPFMConsole` 失效时会被**跳过**，所以「黑屏」既不等于「卡在里面」，也不等于「停住」。
+2. **停点归属未定** —— `docs/03` §4：`[ PCI configuration begin ]` 有两个出处（`IOLog`+`bootConfig` / `DLOG_A`），
+   `DLOG_A` 在当前 RELEASE 内是否生效无法确认；"首次 / 二次配置"的二分法**已撤销**。
+   **分辨之前改参数就是猜。**
 3. **最终硬件配置从未引导过** —— 此时改 EFI，会把"EFI 变量"与"硬件拓扑变量"混在同一轮里。
 
 ### 8.4 Round 10（**零 EFI 改动**）：完整屏录 / 全程连拍基线引导
 **变量**：无。卡保持 `58E78A12…`。
-**要拿到的三件东西**：① 从 OpenCore 选择器到停住的**全程**画面；② 停住后 ≥10 min 的画面；③ 新的 `E:\opencore-<时间戳>.txt`。
+**本轮的目标定位（用户审核后收窄）**：只建立**最终硬件配置下的实际启动观察基线**，
+**不承诺**分辨"首次 / 二次 PCI 配置"。保留以下五类证据：
+
+1. 从 OpenCore 选择器到**停止变化那一刻**的手机视频。
+2. 最后可见屏幕，以及从该状态开始的观察时长。
+3. 约 10 分钟时的照片。
+4. 新生成的 OpenCore DEBUG 日志，以及与 Round 7（`opencore-2026-10-13-213656.txt`）的差异。
+5. 是否进入 Recovery、是否 panic / 重启、是否出现任何新画面。
+
+> **证据等级提醒**：OpenCore DEBUG 日志只覆盖 **OpenCore 阶段**（到 `EXITBS:START` 为止），
+> **不包含 XNU 内部的 PCI 配置轨迹**。因此它只能用于核验 OC 阶段行为（补丁是否应用、BAR 是否缩容、
+> MMIO 去虚拟化、交接是否完成），**不能**当作内核侧证据使用。
 
 1. 用手机**录像**整个引导（从选中 macOS 到停住，停住后再录 10 分钟）。不能录像就**从第一行开始连拍**，
    **不要只拍底部** —— 关键是停点上方那几百行。
-2. 停住后**不要按键、不要等更久**（900 ms 预算已证明等待无效），直接长按电源关机。
+2. 停住后**不要按键**，按批准的时间窗停留约 **10 分钟**，再长按电源关机。
 3. 回 Windows 后把新 `opencore-*.txt` 的文件名告诉我（内容我自己脱敏后再分析）。
 4. 若出现任何**新内容**（`[ PCI configuration end … ]`、panic 文本、进度条），立即拍照并关机，**不要交互**。
 
-预登记判据：
+预登记判据（**只登记观察与证据等级，不做归因**）：
 
-| 观察 | 结论 |
-|---|---|
-| 录像里存在**更早**的 `[ PCI configuration begin ]`（即这次是第二次） | 解释 **(B)** 成立 ⇒ 首轮枚举早已通过，靶点转为晚期重配置（IOMMU / AppleVTD 方向）；`npci/MAT/BAR` 整条轴彻底放弃 |
-| 全程**只有一次**该行，之后直接静默 | 解释 **(A)** 成立 ⇒ 仍是首轮枚举；同时证明本机把首轮配置排到了晚期 kext 之后（本身就是新事实） |
-| 出现 `[ PCI configuration end, bridges N, devices M ]` | **首次拿到 macOS 自己的枚举结果**，可直接与 Windows 的 9 桥 / 44 功能对照 |
-| 出现 panic 文本 | 七轮以来第一次拿到内核级证据，按栈定位 |
-| 与 Rounds 6/7 逐字相同 | 记录"最终配置下停点不变"，作为后续任何单变量的**唯一合法基线** |
+| 观察 | 记录方式 | 证据等级 |
+|---|---|---|
+| 屏幕完全停在现状、10 分钟无变化 | 记为"可见进展停止"，**不断言**内核卡死在哪条指令 | 直接观察 |
+| 出现 `[ PCI configuration end, bridges N, devices M ]` | 逐字抄下 N / M，与 Windows 实测（9 桥 / 44 功能）并列，**不解释差异原因** | 直接观察（内核 `IOLog`） |
+| 出现 panic 文本 / 重启 / 新画面 | 拍照并立即关机，不做归因 | 直接观察 |
+| 录像里出现**更早**一组相同日志 | 只作为**待交叉核对**的线索；需与 `DLOG_A` 是否生效、`addHostBridge` 调用时机分别核对后才可讨论"是否重配置" | 间接 / 待核实 |
+| OC 日志与 Round 7 的差异 | 逐条列出（补丁结果、BAR 缩容、MMIO、交接）；只用于 **OpenCore 阶段**结论 | 直接观察（OC 阶段） |
+| 进入 Recovery | **先记录成功状态，不操作磁盘、不立即断电**，等人工决定 | 直接观察 |
 
 **风险**：与既往各轮同级的引导风险；不写 EFI / 不写 BIOS / 不写任何 NVMe / 不碰 Windows 引导。
 **回滚**：无需（零改动）。若选择器损坏，用固件启动菜单进 Windows，记录"实验无法完成"。
+
+### 8.5 执行前校验与硬约束（2026-10-19 用户批准后登记）
+
+**执行前必须逐个核对（任一不符 ⇒ 不启动）：**
+
+| 项 | 期望值 | 2026-10-19 18:59 实测 |
+|---|---|---|
+| `EFI\OC\config.plist` SHA-256 | `58E78A12C8102AF7A5DD3B2D7417BE891B17EFC78FF0817C99F69C6BC7A78CA3` | ✅ 一致 |
+| `EFI\OC\OpenCore.efi` SHA-256 | `1569CD1D183C5EE9FDA2ECED767A4B2EFA307E6EDFCF2A50109C9657098671FF` | ✅ 一致 |
+| 卡上是否已有本轮新日志 | 启动前应**没有**比 `2026-10-13-213656` 更新的 `opencore-*.txt` | ✅ 没有（最新仍是 10-13 21:37） |
+
+**硬约束（全程不变）：**
+- RTX 4050 独显模式，**不切换 GPU 模式**。
+- 两块 NVMe 全程保留；**SN530 256 GB 是 macOS 安装目标，禁止格式化 / 改分区**。
+- Windows 仍由固件 **Windows Boot Manager** 启动，不动 EFI/BCD。
+- **不执行 Reset NVRAM**。
+- **不增加任何**启动参数、驱动、ACPI 补丁或 DeviceProperties（本轮零改动）。
+- **只执行一次**基线启动。
+- 读回日志后**先脱敏**，带设备身份信息的原始日志**不推送**公开仓库。
