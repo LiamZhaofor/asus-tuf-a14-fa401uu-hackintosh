@@ -986,3 +986,120 @@ EFI 里的 OpenCore 是构建时从 Dortania 的 build 列表**取当时最新**
 - 「存在一处正好落在 1.10.0 边界、命中本机 CPU 的两 Quirk 翻转」= **已证实（源码 + 提交 + 本机配置三方一致）**。
 - 「这处翻转就是本机 Recovery 起不来的原因」= **未证实**，且与上游自述证据方向相反。
 - 「Issue #34 是版本回归」= **未证实**（另一种可能是 OpenCore 版本）。
+
+---
+
+## 14. 外部成功证据检索（Round 12，只读，不改 EFI、不做启动实验）
+
+目标：找到「AMD Ryzen 8845HS + RTX 4050 Laptop、独显直连 eDP」进入 macOS Recovery 的可验证成功案例，
+并判断其中是否有可移植修复。检索范围：GitHub Repositories / Issues / PR / Gist、amd-osx 论坛、
+相关技术论坛；对公开 EFI 只做离线静态检查（未执行任何脚本、未覆盖本机 EFI）。
+
+### 14.1 结论先行
+
+1. **没有找到**任何「8845HS + RTX 4050 独显直连 + Recovery/桌面」的**可交叉验证**成功案例（A 级 0 例）。
+2. 找到 **1 份同 CPU、同机型族（Acer Nitro ANV16-41）的完整公开 EFI**，作者自称"大多数时候能启动"，
+   但**GPU 模式、macOS 版本、启动到哪个阶段都没有任何日志或截图**，只能评为 **A−/B+**（EFI 可复核、成功声明不可复核）。
+3. Issue #34 深查结论：**未取得任何旧版成功材料**（详见 14.2），"旧版成功"仍只是作者自述。
+4. 唯一实质性新增证据：那份公开 EFI 的 `DevirtualiseMmio=false`，与 §13 的"1.10.0 边界翻转"结论**方向一致**，
+   构成 §13 候选 1 之外的第二条独立线索（见 14.5）。
+5. `IOPCIIsHotplugPort`：**不减分、也不加分——结论是"不应恢复"**（见 14.4）。
+
+### 14.2 Issue #34 可核验性（逐项回答）
+
+`https://github.com/nullmoth/1401/issues/34`，通过 GitHub REST API 读取（2026-10-19）。
+
+| 项目 | 事实 |
+|---|---|
+| 标题 | "The more newer version, the more errors i have. Please read my description to clearly understand what happened." |
+| 作者 | `David-Th4t`，账号 **2026-08-04 创建**，`public_repos=0`、`public_gists=0`、`followers=0`、`following=0`、无姓名/简介/站点 |
+| 该账号在本仓库的 issue | **仅此 1 条**（搜索 `repo:nullmoth/1401 author:David-Th4t` = 1） |
+| 评论 / 时间线 / 标签 / 指派 | **0 / 空 / 无 / 无**（`comments=0`，`timeline=[]`）⇒ **维护者从未回复** |
+| 附件 | **2 张 JPEG**（3024×4032，3.76 MB / 3.33 MB，无 EXIF）为唯一材料 |
+| 版本信息 | 只写 "builds from 1.10.0 onwards"，**无具体版本号、无 OpenCore 版本、无 macOS 版本** |
+| GPU 模式 | **未提及**（只说 Acer Nitro ANV16-41 + 8845HS + 780M + RTX 4050 Laptop） |
+| 成功证据 | 无截图、无日志、无 `EFI`、无仓库、无 gist |
+
+**⇒ 是否取得旧版成功 EFI：没有。** 该作者没有公开任何仓库/Gist/附件 EFI；该 issue 的 timeline 为空，
+也没有交叉引用。**⇒ 是否能确认成功时的 GPU 模式：不能。** **⇒ 是否有可验证的版本回归证据：不能**，
+只有"1.10.0 起不行"这一句陈述，无法与 §13 的源码差异做闭环。
+
+两张照片是本轮唯一可能含信息的物证，但本机当前模型**不支持图像输入**（`read_image` 报
+"model does not declare image input"），因此**没有解读其内容，也不对内容做任何推测**。
+
+### 14.3 最相关的公开 EFI：`bruhiamandy/Hackintosh-ANV16-41-R7HU`
+
+- 仓库：<https://github.com/bruhiamandy/Hackintosh-ANV16-41-R7HU>（2025-05-08，单日 3 次提交，无后续更新）
+- 内容：完整 `EFI/`（`BOOT/BOOTx64.efi`、`OC/OpenCore.efi` 622,592 B、`OC/config.plist` 59,270 B、
+  6 个 ACPI（EC/HPET/PLUG-ALT/PNLF/USBX/XOSI）、2 个驱动（HfsPlus、OpenRuntime）、31 条 kext 记录）
+- README 原文（解码后）：
+  - **WHAT WORKS**："It boots most of the times. If it gets stuck, restart your laptop and try again, it will unstuck on it's own. From what I understand it hangs because of a **USB issue**. Ethernet"
+  - **WHAT DOESN'T WORK**："Graphic Acceleration、Wi-Fi & Bluetooth"
+  - "I did not test it much… in case someone needs a **template**… Do not expect further updates."
+- 机型：`ANV16-41-R7HU`，Ryzen 7 8845HS。**显卡具体型号未在仓库中出现**（ANV16-41 同时有 RTX 4050 与 RTX 4060 配置）
+- 离线检查方式：只下载文本与 `.efi` 到 `Documents\macos\external\anv16-41\`（**未入库**），用 `plistlib` 解析；
+  全流程**未执行**其中的任何脚本或二进制
+
+**与本机卡（`021F02B3…`）的实测差异**（同一脚本逐项比对）：
+
+| 键 | ANV16-41（能启动） | 本机卡 |
+|---|---|---|
+| `Booter.Quirks.DevirtualiseMmio` | **false** | **true** |
+| `Booter.Quirks.SetupVirtualMap` | true | true |
+| `Booter.Quirks.AllowRelocationBlock` | false | true |
+| `Booter.Quirks.FixupAppleEfiImages` | false | true |
+| `Booter.Quirks.DisableVariableWrite` | false | true |
+| `Booter.Quirks.ResizeAppleGpuBars` | **-1** | 0 |
+| `Booter.MmioWhitelist` | 2 条（**都 Disabled**，OpenCore 样例项） | 0 条 |
+| `Kernel.Quirks.CustomSMBIOSGuid` / `DisableRtcChecksum` | false / false | true / true |
+| `Kernel.Patch` | 25 条（22 启用），`IOPCIIsHotplugPort` **禁用** | 27 条（24 启用），`IOPCIIsHotplugPort` **禁用** |
+| ACPI `Add` | 6 个（含 **SSDT-HPET**） | 7 个（含 RMNE/USB-Reset/Disable_Network，**无 HPET**） |
+| ACPI `Patch` | 8 条（**HPET `_STA`/`_CRS` 改名 + PIC/RTC/TMR IRQ 清零** + `_OSI→XOSI`） | **1 条**（仅 `_OSI→XOSI`） |
+| `DeviceProperties` | **空** | 3 条（`acpi-wake-type=1`、`disable-gpu=true`、`layout-id=56`） |
+| 独显相关 kext | 无（有 WhateverGreen、GenericUSBXHCI、ECEnabler、RealtekRTL8111） | 无（有 AMFIPass、NullEthernet、Sinetek-rtsx、HoRNDIS） |
+| `boot-args` | `-v debug=0x100 keepsyms=1 **npci=0x3000** -no_compat_check agdpmod=pikera` | `-v debug=0x100 keepsyms=1 -vi2c-force-polling nvfb=1 …` |
+| SMBIOS | `MacBookPro16,3`，序列号/MLB/UUID 均为**占位值**（`W00000000001` / `M0000000000000001` / 全 0），`UpdateSMBIOSMode=Create` | `MacBookPro16,2`，真实三元组，`UpdateSMBIOSMode=Custom` |
+| `Misc.Security.DmgLoading` | `Signed` | `Any` |
+| UEFI 驱动 | HfsPlus、OpenRuntime | + ResetNvramEntry、**NullMothLogo** |
+
+**必须写清的边界**：`DeviceProperties` 为空、没有 `disable-gpu`、装了 WhateverGreen、内核补丁最高只覆盖
+到 `24.99.99`（Sequoia）——这些特征指向**它的显示路径是 iGPU/固件 framebuffer，而不是"RTX 4050 接管 eDP"**；
+但仓库里**没有 DMI 之外的 GPU 证据**，因此"它当时是哪种 GPU 模式"**无法确认**，不能据此断言独显直连可行。
+
+### 14.4 `IOPCIIsHotplugPort` 判定（回答"是否值得重新考虑"）
+
+- 补丁字节（两版本一致）：`Find = 84 00 75 4B` → `Replace = 00 00 EB 00`，`Identifier = com.apple.iokit.IOPCIFamily`，
+  `MinKernel 22.0.0 / MaxKernel 24.x–25.x`，作用是让 `IOPCIIsHotplugPort` 恒为假、绕过热插拔端口的条件分支。
+- 1401 在 `v1.9.0` 与 `v1.14.2` 里**都为 Phoenix 启用**（`config_prodigy.py:487-489`，`cpu_codename in (… "Phoenix" …)`）。
+- **但**：唯一一份在 8845HS 上"能启动"的公开 EFI 里，这一条是 **`Enabled=false`**；本机卡也是 `false`。
+- **结论：没有证据支持恢复它。** 它是 AM5（桌面芯片组）总线枚举的解法，Phoenix 笔记本侧没有成功案例需要它；
+  "上游默认启用"不构成恢复理由。
+
+### 14.5 对候选排序的影响
+
+`DevirtualiseMmio` 现在有三方交叉：
+
+| 配置来源 | `DevirtualiseMmio` | 结果 |
+|---|---|---|
+| 1401 `v1.9.0`（#34 称可启动） | false | 自述可启动 |
+| 1401 `v1.10.0+`（#34 称不可启动） | true | 自述不可启动 |
+| ANV16-41 公开 EFI（8845HS，自称可启动） | **false** | 自述可启动 |
+| 本机卡（Recovery 起不来） | true | 实测卡住 |
+
+两个"能启动"的独立配置交集都是 **`DevirtualiseMmio=false`**，而 `SetupVirtualMap` 在两者中不同
+（false / true）⇒ 可变量指向 `DevirtualiseMmio`，且它**从未在本机跑过**。
+反证同样要记录：1401 的 `tests/test_zen4_devirt.py` 自述"Zen 4/5 在 `DevirtualiseMmio` 关闭时停在
+boot.efi `EB.MM.AKM`"——若本机改成 false 后**倒退到 boot.efi**，该假设即被证伪，应立刻回滚。
+
+`boot-args` 的 `npci=0x3000` 也出现在那份能启动的 EFI 里，但它是常见模板残留（同一行的 `agdpmod=pikera`
+对无 AMD 独显的机器没有作用），且 Issue #70（AMD + RTX 4070 Laptop）里试过 `npci=0x2000` 无效 ⇒ **本轮不提案**。
+
+### 14.6 仍未获得的东西（不得用推测填补）
+
+- 8845HS + 独显直连的 Recovery / 桌面成功证据：**0 例**。
+- Issue #34 的旧版 EFI、GPU 模式、1401 具体版本、OpenCore 版本、macOS 版本、日志：**全部缺失**。
+- 任何一份"AMD 笔记本 + NVIDIA 独显直连"的完整 EFI（现有最接近的是 Intel + RTX 4060 Laptop 的
+  `nullmoth/nvidia-macos-driver#155`，MUX 独显模式、Metal 3 可用，但 CPU 是 i7-13620H）。
+
+**本轮未改动**：EFI / BIOS / GPU 模式 / NVRAM / ACPI / 内核补丁 / 两块 NVMe / 安装介质；
+未创建或评论任何 GitHub Issue；未上传任何日志或文件到仓库。
