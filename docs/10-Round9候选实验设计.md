@@ -535,9 +535,24 @@ BusNumber 描述符 **0**。
 
 ⇒ **本机 EFI 与 NullMoth 官方"安装器配方"只差 `UEFI → Quirks → ResizeGpuBars` 一个整数。**
 
-**第二处独立印证**（不只是驱动 README，装机工具自己的代码也是这个配方）：
-`p1401/efidoctor.py:90-93` —— 1401 生成**安装盘** EFI 时写的正是 `ResizeAppleGpuBars = 0` + `ResizeGpuBars = -1`。
-⇒ 这条不是某个人的说法，而是**工具的实际行为**。
+**第二处独立印证**（不只是驱动 README）：装机工具生成安装盘时同样采用该配方。
+**⚠️ 2026-10-19 用户审核更正：不能把 `p1401/efidoctor.py:90-93` 当作"同时改两个 Quirk"的代码依据** ——
+那一处只直接校正 `Booter` 侧的值；两个 Quirk 的完整生成逻辑在
+`https://github.com/nullmoth/1401/blob/main/p1401/policy.py`。
+⇒ 本节结论仍成立（上游 `HOW-IT-WORKS.md` 原文 + `policy.py`），但**引用口径已按此更正**。
+
+### 9.2b 实验定位更正：**Round 11 不是首次尝试，而是最终硬件配置下的重验证**
+
+| 配置来源 | `UEFI.Quirks.ResizeGpuBars` | `Booter.Quirks.ResizeAppleGpuBars` | 证据 |
+|---|---|---|---|
+| **Round 4 基线**（`efi-snapshots/round4-r7-baseline/EFI/OC/config.plist`，`021F02B3…`，52124 B） | **`-1`** | `0` | 本地快照实测读取 |
+| **Round 7 / 当前卡上**（`58E78A12…`，52123 B） | **`0`** | `0` | 卡上实测读取 |
+
+⇒ **Round 4 与 Round 6 已经用过 `UEFI=-1、Booter=0`，当时未进入 Recovery。**
+⇒ Round 11 的目标组合（`-1` / `0`）**等于 Round 4 基线的那一对值**；它改变的只是"When"（UEFI 阶段是否缩容），
+不改变 Apple 阶段（仍为 `0`）。
+⇒ **Round 11 的正确定位：在最终硬件配置（RTX 4050 直连 + 双 NVMe）下，对上游安装器推荐设置的一次重新验证。**
+⇒ **不得**描述成"首次尝试"，**不得**宣称成功率高；它的价值在于"要么推进、要么把 BAR 通道这一小类排除掉"。
 
 ### 9.3 Round 11 候选（**单变量**；未批准、未执行）
 
