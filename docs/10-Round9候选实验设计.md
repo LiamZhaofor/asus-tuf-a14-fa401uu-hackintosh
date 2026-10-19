@@ -494,7 +494,7 @@ BusNumber 描述符 **0**。
 |---|---|---|---|
 | ① OpenCore 选择器 | 固件 GOP | 不需要 | ✅ 可见（一直可见） |
 | ② 内核早期文本（`-v`） | **固件屏幕**：`IONDRVFramebuffer` 匹配 `.Display_boot`（NVRMFB `Info.plist` 注释：`.Display_boot, probe 20000`） | **不需要** | ✅ 可见（`RTC:` 等全部输出） |
-| ③ **Recovery 图形界面** | **同 ① / ②** —— `HOW-IT-WORKS.md:90`：「The macOS installer has no NVIDIA driver, so it **runs on the firmware's screen**」 | **不需要** | ✅ **可行** |
+| ③ **Recovery 图形界面** | **同 ① / ②** —— `HOW-IT-WORKS.md:90`：「The macOS installer has no NVIDIA driver, so it **runs on the firmware's screen**」 | **不需要** | ⚠️ **机制上可行，但官方明确不保证**（见下） |
 | ④ 安装后的加速桌面 | NullMoth：`NVRMFB`(IOFramebuffer) + `NVAccel` + `NVRMAGDC` + `NVRM` + GSP 固件 | 需要（且只能装到 `/Library/Extensions`） | 未安装（正常，安装阶段不该有） |
 
 ⇒ **§8.2 里"两块 GPU 都不参与显示 ⇒ Recovery 必然黑屏"是错的，已就地更正。**
@@ -502,8 +502,18 @@ BusNumber 描述符 **0**。
 所以 **iGPU 被 `disable-gpu` 关掉、dGPU 无 Apple 驱动，都不妨碍 Recovery 显示**。
 ⇒ 这也解释了为什么屏幕能一路打到 `RTC:`：那本来就是固件屏幕在输出。
 
-**并且：驱动仓库明确要求「kext 只能装进 `/Library/Extensions`，不要从 `EFI/OC/Kexts` 注入」**
-（`README.md` §"Wiring into an existing OpenCore setup"）。⇒ **"把 kext 注入 EFI 换取安装期显示"是错的方向，已排除。**
+> **必须同时记住的官方保留意见**（`p1401/nullmoth.py:63-64`）：
+> *"Firmware output may appear during boot, but it does not establish that the installer or
+> accelerated desktop will work on this panel."*
+> ⇒ ③ 只能记为「**路径存在**」，**不能**记为「Recovery 一定能显示」。
+> 另：`IONDRVFramebuffer` 只是"能接管固件 framebuffer"，它在我们的面板上是否成功初始化，本轮没有证据。
+
+**并且：驱动仓库**（`HOW-IT-WORKS.md:54-56`）**给了排除注入的硬理由**：
+> *"They are not injected by OpenCore: the display kexts link against Apple frameworks
+> (IOGraphicsFamily, IOAcceleratorFamily2) that only exist in macOS's own kernel collections."*
+
+⇒ **"把 kext 注入 EFI 换取安装期显示"不仅不被推荐，而是按设计不可行**，已彻底排除。
+⇒ 顺带：`NMIntelFB` 的 `IOPCIPatch` 是 `0x00008086`（**仅 Intel**），所以"用 iGPU 当屏幕"这条路对本机 **不存在**。
 
 ### 9.2 与第一方"安装器配方"逐项比对 —— **只差一个标量**
 
@@ -521,6 +531,10 @@ BusNumber 描述符 **0**。
 | 无 `nv_disable=1` / 无 `agdpmod=pikera` / 无 WhateverGreen NVIDIA 补丁 | 无 | 无 | ✅ |
 
 ⇒ **本机 EFI 与 NullMoth 官方"安装器配方"只差 `UEFI → Quirks → ResizeGpuBars` 一个整数。**
+
+**第二处独立印证**（不只是驱动 README，装机工具自己的代码也是这个配方）：
+`p1401/efidoctor.py:90-93` —— 1401 生成**安装盘** EFI 时写的正是 `ResizeAppleGpuBars = 0` + `ResizeGpuBars = -1`。
+⇒ 这条不是某个人的说法，而是**工具的实际行为**。
 
 ### 9.3 Round 11 候选（**单变量**；未批准、未执行）
 
@@ -556,3 +570,17 @@ BusNumber 描述符 **0**。
 | RTX 4050 Laptop（Ada `10DE:28E1`） | 在设备表内，但**物理验证 Pending**；公开 issue 里**没有 RTX 4050 Laptop 的成功记录** | 未知，属最大不确定性 |
 
 ⇒ 这几项都**只能**在 macOS 装好之后再动（1401 Mac app 会自动切换），**现在改它们没有意义**。
+
+**关于 RTX 4050（`10DE:28E1`）支持程度的准确表述**（逐条有出处）：
+
+| 结论 | 依据 |
+|---|---|
+| **`28E1` 明确在设备表内** | `nvidia_gsp_ids.json:195`：`"28E1": "NVIDIA GeForce RTX 4050 Laptop GPU"`；`package/install.sh:104` 的 `SUPPORTED_IDS` 也硬编码了 `28E1` |
+| 但"测试过"的只有 **`2D05`（RTX 5060 桌面）** | `nvidia_gsp_ids.json:3-5`；`CARD-SUPPORT.md:65-74` 的渲染/CI/MPS 证据仅限该卡 + macOS 15.8.1 |
+| **Ada（RTX 40，含笔记本）物理验证 = Pending** | `CARD-SUPPORT.md:11-16` |
+| 设备表 ≠ 可用 | `CARD-SUPPORT.md:5-9`：*"A device-table match does not establish that a particular laptop's display routing, firmware, BAR placement, or macOS installation works."* |
+| 只提供 4 个 kext：`NVRM / NVAccel / NVRMFB / NVRMAGDC` | `package/install.sh:8`；`NMDRM / NMHDA / NMIntelFB` 不在发布包里 |
+| 出像素的最小集 = `NVRM` + `NVRMFB`；`NVAccel` 是 WindowServer 的硬条件 | `NVRMFB` 是唯一 `IOFramebuffer`（`nvrm-fb.cpp:172`）；缺 `NVAccel` 时 `install.sh:249-251` 记录 WindowServer "Failed to create MetalDevice" |
+| 内屏背光是独立问题 | 需 `nvRmRegisterBacklight` + NBCI `_DSM`（`nvrm-fb.cpp:1858-1867`）；1.14.1 因"挂死引导"**移除了**自动笔记本亮度，改为 `nvrmacpibl=1` 才启用（`RELEASE-1.14.1.md:9-12`）|
+
+⇒ **"RTX 4050 能不能用"的诚实答案：ID 被支持、代码路径覆盖、但该 SKU 从未被物理验证，且公开 issue 里没有成功记录。**
