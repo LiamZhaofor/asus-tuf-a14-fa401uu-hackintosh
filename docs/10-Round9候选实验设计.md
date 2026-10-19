@@ -358,3 +358,72 @@ BusNumber 描述符 **0**。
 即使 dGPU 已回来，**当前机器比 Round 8 多一块 NVMe**（`00:01.2`/GPP1 → `02:00.0`）。
 ⇒ **任何新的 macOS 引导与 Rounds 2/4/6/7 不可逐字等同**：多了一个 PCIe 设备与一座桥。
 若要严格复现旧基线，需要（由操作者决定、本轮不做）**移除那块 SSD** 或**在对比时明确把它列为差异项**。
+
+---
+
+## 8. 2026-10-19 重定方向：撤销 §7.5，Round 10 = 最终硬件配置下的**完整屏录**基线（零 EFI 改动）
+
+### 8.0 方向变更（用户指令）
+- §7.5 的 GPU 模式 A₁→B→A₂ 对照**正式撤销，不再执行**。
+- 最终环境锁定：**独显模式（内屏由 RTX 4050 接管）+ 两块 NVMe 长期保留**；
+  第二块 NVMe 是 macOS 安装目标，**不是需要排除的变量**。
+- 不再以增加文档/代码行数作为进度；不再扩大没有决策价值的 Windows 静态审计。
+
+### 8.1 本次只读核实结果（2026-10-19，Windows，未改任何设置）
+
+| 核实项 | 结果 | 依据 |
+|---|---|---|
+| RTX 4050 在场 | ✅ `01:00.0` `10DE:28E1` + `01:00.1` `10DE:22BE`，父桥 `00:01.1`（DSDT `GPP0`，`_ADR 0x00010001`） | `DEVPKEY_Device_BusNumber` = 1 |
+| **内屏由 RTX 4050 接管** | ✅ 内屏 `BOE0CA4`（NE140QDM-NX7）**父设备就是 `PCI\VEN_10DE&DEV_28E1`**；780M 名下无任何显示器；内屏连接类型 `0x0B`（eDP） | `DEVPKEY_Device_Parent` + `WmiMonitorConnectionParams` |
+| 两块 NVMe 均在 PCI 树内 | ✅ 见下表 | — |
+| 仍是 Round 7 原始配置 | ✅ `config.plist` `58E78A12…`（52123 B）、`OpenCore.efi` `1569CD1D…` | SHA-256 |
+
+| 盘 | 型号 | PCI 路径 | 总线 | 父桥（ACPI） | 角色 |
+|---|---|---|---|---|---|
+| `15B7:5017` | WD PC SN740 512G | `PciRoot(0x0)/Pci(0x2,0x4)/Pci(0x0,0x0)` | `0x05` | `00:02.4` = `GPP8`（`\_SB.PCI0.GPP8.NVME`） | Windows（C:） |
+| `15B7:5009` | WDC PC SN530 256G | `PciRoot(0x0)/Pci(0x1,0x2)/Pci(0x0,0x0)` | `0x02` | `00:01.2` = `GPP1`（DSDT `_ADR 0x00010002`；**厂商 ACPI 无具名子节点**） | **macOS 目标盘**（现为 D:，NTFS） |
+
+实测总线分布：`0x00–0x05` 在用；`0x66`（iGPU / PSP / xHCI / ACP / HDA）、`0x67`（AMD PCI + NPU）、
+`0x68`（AMD PCI + xHCI + USB4 NHI `1022:1668`）；中间 `0x06–0x65` 共 96 条仍空。
+
+### 8.2 与"此前硬件状态"耦合的配置项（逐项判定）
+
+| 配置 | 目标 | 判定 |
+|---|---|---|
+| DeviceProperties `Pci(0x1,0x1)/Pci(0x0,0x0)` → `acpi-wake-type=1` | **RTX 4050** | 独显模式下路径始终存在，保留 |
+| DeviceProperties `Pci(0x8,0x1)/Pci(0x0,0x0)` → `disable-gpu=true` | **780M iGPU**（`00:08.1` → 总线 `0x66`） | 路径有效；但它意味着 macOS 下**两块 GPU 都不参与显示**（dGPU 无驱动、iGPU 被关）⇒ 即使 PCI 阶段通过，Recovery 到"要画界面"那步必然黑屏。属已知限制，不是本轮停点原因 |
+| DeviceProperties `Pci(0x8,0x1)/Pci(0x0,0x6)` → `layout-id=56` | `1022:15E3` ACP 音频 | 实测位于 `0x66:00.6` ✅ |
+| `SSDT-Disable_Network_GPP6` | `\_SB.PCI0.GPP6.WLAN`（`Pci(0x2,0x2)`） | MT7922 仍在 bus `0x04`、父桥 `00:02.2` ⇒ 路径有效；但 `docs/03` 已证明该表因 `AE_ALREADY_EXISTS` **从未生效** |
+| `boot-args nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth` + `Drivers/NullMothLogo.efi` | NullMoth / NVIDIA 驱动 | **驱动未注入**：`Kexts/` 无 NVRM/NVRMFB/NMDRM，只有 logo 驱动；NullMoth `README.txt` 写明「**After macOS finishes installing**」才装驱动 ⇒ 这些参数当前**无消费者、纯惰性**，不是停点原因，但必须记住 |
+| `Booter.ResizeGpuBars=0` / `UEFI.ResizeGpuBars=0` | BAR | **当前是关闭的**。"BAR1 缩到 64 MiB 已在双阶段读回中验证"属历史轮次，**不是现在的卡上状态** |
+| `Misc.Debug.ApplePanic=true` | panic 落盘 | **已开启**；12 份 OC 日志每次都打印 `OC: Panic log does not exist`，`E:\` 下无 `panic-*.txt` ⇒ 通道被检查过，但从未命中 |
+
+### 8.3 结论：**暂不具备值得冒险的 EFI 修改**（三条独立理由）
+1. **看得见的那行没有信息量** —— `docs/03` §2 新增块（含行号）证明屏幕在两条可见消息之后第 3 行即被关闭，
+   `doConfigure()` 全程处于遮挡区；且路径上所有等待共用一个 900 ms 预算，**等待无法区分"慢"与"停"**。
+2. **停点归属未定** —— `docs/03` §4：`[ PCI configuration begin ]` 出现在晚期 kext 之后，
+   (A) 首轮配置 / (B) 晚期重配置 两种解释并存且对策相反。**分辨之前改参数就是猜。**
+3. **最终硬件配置从未引导过** —— 此时改 EFI，会把"EFI 变量"与"硬件拓扑变量"混在同一轮里。
+
+### 8.4 Round 10（**零 EFI 改动**）：完整屏录 / 全程连拍基线引导
+**变量**：无。卡保持 `58E78A12…`。
+**要拿到的三件东西**：① 从 OpenCore 选择器到停住的**全程**画面；② 停住后 ≥10 min 的画面；③ 新的 `E:\opencore-<时间戳>.txt`。
+
+1. 用手机**录像**整个引导（从选中 macOS 到停住，停住后再录 10 分钟）。不能录像就**从第一行开始连拍**，
+   **不要只拍底部** —— 关键是停点上方那几百行。
+2. 停住后**不要按键、不要等更久**（900 ms 预算已证明等待无效），直接长按电源关机。
+3. 回 Windows 后把新 `opencore-*.txt` 的文件名告诉我（内容我自己脱敏后再分析）。
+4. 若出现任何**新内容**（`[ PCI configuration end … ]`、panic 文本、进度条），立即拍照并关机，**不要交互**。
+
+预登记判据：
+
+| 观察 | 结论 |
+|---|---|
+| 录像里存在**更早**的 `[ PCI configuration begin ]`（即这次是第二次） | 解释 **(B)** 成立 ⇒ 首轮枚举早已通过，靶点转为晚期重配置（IOMMU / AppleVTD 方向）；`npci/MAT/BAR` 整条轴彻底放弃 |
+| 全程**只有一次**该行，之后直接静默 | 解释 **(A)** 成立 ⇒ 仍是首轮枚举；同时证明本机把首轮配置排到了晚期 kext 之后（本身就是新事实） |
+| 出现 `[ PCI configuration end, bridges N, devices M ]` | **首次拿到 macOS 自己的枚举结果**，可直接与 Windows 的 9 桥 / 44 功能对照 |
+| 出现 panic 文本 | 七轮以来第一次拿到内核级证据，按栈定位 |
+| 与 Rounds 6/7 逐字相同 | 记录"最终配置下停点不变"，作为后续任何单变量的**唯一合法基线** |
+
+**风险**：与既往各轮同级的引导风险；不写 EFI / 不写 BIOS / 不写任何 NVMe / 不碰 Windows 引导。
+**回滚**：无需（零改动）。若选择器损坏，用固件启动菜单进 Windows，记录"实验无法完成"。
