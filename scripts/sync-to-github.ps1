@@ -35,7 +35,7 @@ param(
     [string] $Message,
     [switch] $SkipPush,
     [string] $Proxy,
-    [string] $StickConfig = 'D:\EFI\OC\config.plist'
+    [string] $StickConfig
 )
 
 $ErrorActionPreference = 'Stop'
@@ -64,6 +64,9 @@ Write-Host "python : $python"
 
 # ------------------------------------------------------------------ 1. sanitize
 Step 1 "sanitize the stick config into efi/config.plist"
+if (-not $StickConfig) {
+    throw "REFUSING - -StickConfig is required. Pass the card's real path, e.g. -StickConfig E:\EFI\OC\config.plist. There is no default: the drive letter changes between sessions."
+}
 if (-not (Test-Path $StickConfig)) { throw "stick config not found: $StickConfig (is the stick plugged in?)" }
 $staged = Join-Path $env:TEMP ("1401-sanitized-" + [guid]::NewGuid().ToString('N') + ".plist")
 & $python (Join-Path $repo 'scripts\sanitize-config.py') $StickConfig $staged

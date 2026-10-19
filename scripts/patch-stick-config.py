@@ -96,7 +96,8 @@ def do_show(cfg):
 
 def main():
     ap = argparse.ArgumentParser(description="免提权修改 U 盘上的 OpenCore config.plist")
-    ap.add_argument("--config", default=r"D:\EFI\OC\config.plist")
+    ap.add_argument("--config", default=None,
+                    help="卡上 EFI/OC/config.plist 的路径，必须显式给出（盘符会变化，没有默认值）")
     ap.add_argument("--show", action="store_true", help="只显示当前配置，不修改")
     ap.add_argument("--boot-arg", action="append", default=[], help="追加启动参数")
     ap.add_argument("--del-boot-arg", action="append", default=[], help="删除启动参数")
@@ -106,6 +107,8 @@ def main():
     ap.add_argument("--remove-acpi", action="append", default=[], help="按 Path 删除 ACPI 注入项")
     a = ap.parse_args()
 
+    if not a.config:
+        sys.exit("必须用 --config 指定卡上 EFI/OC/config.plist 的真实路径（盘符会变化，没有默认值）")
     if not os.path.isfile(a.config):
         sys.exit(f"找不到 {a.config}（U 盘插好了吗？）")
 
