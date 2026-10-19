@@ -636,3 +636,61 @@ BusNumber 描述符 **0**。
 
 **F. 结论等级**：在"Phoenix/780M + Ada + 直连 eDP"这一具体组合上，**没有正面案例，也没有带日志的失败write-up**。
 ⇒ 对"Recovery 能否出图形界面"只能记为 **undetermined**（机制存在且被 Apple 源码证实，但本组合无实例）。
+
+---
+
+## 10. Round 11 执行结果（2026-10-19 20:22，单变量：`UEFI.Quirks.ResizeGpuBars` `0`→`-1`）
+
+### 10.1 结论
+
+**未进入 Recovery，无 panic、无自动重启。**
+按用户批准的口径，本轮**只证明一件事：取消 UEFI 阶段的 BAR 调整，没有解决本次启动失败。**
+不得据此宣称 BAR 通道 / IOPCIFamily / framebuffer 假设已全部证伪，也不自动提出第二次参数修改。
+
+### 10.2 前置校验与备份（全部通过）
+
+| 项 | 值 |
+|---|---|
+| 改前卡上 `config.plist` | `58E78A12…`（52123 B） |
+| 改前 `OpenCore.efi` | `1569CD1D…`（未变） |
+| 未脱敏备份 | `efi-backups/round11-pre-20261019-200625/config.plist`，回读校验 `58E78A12…` ✅ |
+| 改后卡上 `config.plist` | **`021F02B3B46953021FF31835518790DD6BEB57074BE822D127305434581815E4`**（52124 B） |
+| 字节级证明 | 全文件唯一差异 = 偏移 `0xCA6D` 处 `'0'` → `"-1"`，前后缀逐字节相同 |
+| `ocvalidate` 1.0.9 | `No issues found`（exit 0，对**改后卡上文件**） |
+| `Booter.ResizeAppleGpuBars` | 保持 `0`（未动） |
+
+### 10.3 一个重要事实：本轮 EFI 与 Round 4 基线**逐字节相同**
+
+改后哈希 `021F02B3…` 与 `efi-snapshots/round4-r7-baseline/EFI/OC/config.plist` **完全相同**。
+⇒ Round 7 相对 Round 4 的全部差异就是这一个整数；Round 11 的 EFI **不是新配置**，
+本次实验唯一的"新"来自硬件拓扑（RTX 4050 直连 + 双 NVMe）。
+
+### 10.4 OpenCore 阶段：改动按预期生效（`logs/opencore-2026-10-19-202218.txt`）
+
+| 检查点（用户指定） | 结果 |
+|---|---|
+| `OC: Setting GPU BARs to 0` 的 UEFI 早期调用 | **完全消失**（全文无此串） ✅ |
+| Apple 阶段是否仍执行 `inc 0` | **是**：`14:957 OCDM: Setting RBAR to 0 inc 0 on 5/45` ✅ |
+| 是否仍从 `13` 缩容到 `6` | **是**：`RBAR 2/3 supports 0x3FC0, sizing 0 inc 0 results setting from 13 to 6` ✅ |
+| BAR 相关错误 | 无；仅 `RBAR is unsupported by device - Not Found`（iGPU，历轮相同） |
+| `EXITBS` / `Prelinked` / 补丁 / 其余 Quirk | 全部照旧：`EXITBS:START @16.555s`、`Prelinked status - Success`、quirk 汇总逐字相同、`MAT support is 1`、MMIO devirt 同 5 区域 `skip 0`、`Valid slides - 81-255` |
+| 硬件不变 | 45 张 ACPI 表 / 45 个 PCI 功能（与 Round 10 一致） |
+
+⇒ **单变量生效且干净**：UEFI 阶段的 BAR 重编程被去掉，Apple 阶段的小 BAR 保留（正是上游安装器配方）。
+
+### 10.5 屏幕：本轮唯一可见差异（**观察，非结论**）
+
+| | Round 7 末屏 | Round 11 末屏 |
+|---|---|---|
+| 最后两行 | `[ PCI configuration begin ]` → `[IOPCIConfigurator::configure()] PCI configuration PCI0` | **`[IOPCIConfigurator::configure()] PCI configuration PCI0`（前一行是 AppleVTD）** |
+
+按本仓库源码：`:3321` 那条 `configure()` 消息是 `IOLog` 且**无门控**；`[ PCI configuration begin ]` 是 `IOLog` 但**受 `bootConfig` 门控**。
+⇒ **若部署版 681.x 的门控与本仓库一致**，则本轮停在一次 **`bootConfig == 0` 的 `configure(0)` 调用**（`configOp()` 路径），
+而非 `addHostBridge()` 的启动配置 —— 这意味着**启动期 PCI 配置已经完成**。
+
+**这一条必须按"未证实"对待**，理由三条：
+1. 依赖"部署版内核门控与本仓库一致"，而本仓库已证明不是同一版本（banner 字段不同）；
+2. 只有**一次**观察，按本轮规定**不允许重复引导**验证；
+3. 存在"控制台滚动/绘制差异"这一平凡解释，无法排除。
+
+⇒ 因此**不得**把本轮写成"取得进展"；只能记为**"最后可见行发生了变化"**这一事实。
