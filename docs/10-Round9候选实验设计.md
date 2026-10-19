@@ -942,3 +942,47 @@ L264:     change("amd-zen4-memory-map", ...)
 未修改 EFI / GPU 模式 / BIOS / NVRAM / 两块 NVMe；未做启动实验；未提出照搬他板 ACPI 补丁；
 未把 Issue #34 当成已证实的回归；未因本条差异提出本轮执行动作（是否把两条 Quirk 回退到 v1.9.0 的"都关"，
 **需用户单独批准**，且必须预先写明判据）。
+
+### 13.8 深度源码对照补充（第二路独立核对，`v1.9.0` ↔ `v1.14.2`，只读）
+
+两路核对结论一致，并补充以下**已逐行核实**的事实：
+
+**A. 确认"没有变"的部分（因此不构成候选）**
+
+| 项 | 对照结果 |
+|---|---|
+| AMD Vanilla 补丁来源 | **两 tag 完全一致**：仍是**运行时拉取、不内置**（`p1401/kernel_patches.py:11` → `laobamac/AMD_Vanilla/refs/heads/master/patches.plist`，`config_prodigy.py:451`）。补丁集与 `MinKernel`/`MaxKernel` **无改动** |
+| 核心数替换 | `config_prodigy.py:484-486` 两 tag 相同（本机得到 `mov eax,8` / `mov edx,8`，实测已核） |
+| `ProvideCurrentCpuInfo` | 两 tag 相同，AMD 全局启用 |
+| `RebuildAppleMemoryMap` / `SyncRuntimePermissions` / `EnableWriteUnprotector` | **默认值未动**（`config_prodigy.py:629/635/638`） |
+| `ResizeGpuBars` / `ResizeAppleGpuBars` | **生成文本两 tag 完全相同** |
+| ACPI SSDT 清单 | **无变化**；生成器 `acpi_guru.py` 两 tag **哈希相同**；**`SSDT-Disable_Network_GPP6` 的生成逻辑两 tag 相同**（`acpi_guru.py:1944`）⇒ 它不是版本回归产物 |
+| OEM 表处理 / DSDT 前向 Scope pass | 无变化（`dsdt_pass1.py` 两 tag 相同） |
+| 唯一新增的 ACPI 热修复 | **仅 Intel Core Ultra**（`policy.py:164-173`：`Delete DMAR` + `DisableIoMapper`）⇒ 与本机无关 |
+| DeviceProperties / `disable-gpu` / `layout-id` / `acpi-wake-type` | AMD 侧**无改动**；新增 iGPU 代码全部 **Intel-only** 门控（`engine.py:292`、`panel_guard.py:69`） |
+| `IOPCIIsHotplugPort` | **两 tag 都已为 Phoenix 启用**（`config_prodigy.py:487-489`）⇒ **不是回归** |
+| `probeBusGated` | 两 tag 均**不存在** |
+| VoodooI2C/PS2、RTC、NVMeFix、USB 映射 | 无改动（`mirror.json` 相同） |
+| SMBIOS 变化 | 仅 `iMacPro1,1 → MacPro7,1` 一处，**笔记本不受影响** |
+
+**B. 候选排序（更新）**
+
+| 序 | 差异 | 是否适用本机 | 备注 |
+|---|---|---|---|
+| **1** | **Zen 4/5 强制 `DevirtualiseMmio=True` + `SetupVirtualMap=True`**（`policy.py:260-265`，提交 `58bda3ed` / `1d84d960`） | ✅ 命中（`phoenix`/`hawk point`） | 本机卡上正是"都开"；旧版生成"都关"，本机从未跑过 |
+| **1b** | **Zen 4/5 强制 `DisableVariableWrite=True`**（`policy.py:273-277`，提交 `068e23e`） | ✅ 命中 | 本机卡上已是 `true` ⇒ 已符合 |
+| **2** | **新增 `NullMothLogo.efi` 并在 1.14.2 里默认启用**（`policy.py:359-372`；v1.9.0 树里没有这个文件） | ✅ 卡上 `Enabled=true` | 它只 HOOK `GOP.Blt` 替换 Apple logo；`-v` 下不会触发该 blit ⇒ **机制上不太可能影响**，但它是 1.14.2 新增到每个 EFI 里的唯一 UEFI 驱动 |
+| **3（非回归，但重要）** | 本机卡上 `IOPCIIsHotplugPort` 补丁被**手动禁用**，而 **1.9.0 与 1.14.2 都会为 Phoenix 启用它** | ✅ | ⇒ **本机配置并不是"1401 生成的原样配置"**，存在人工改动；这条与版本无关，但它说明"卡上=1401 产物"这个前提不成立 |
+
+**C. 一个必须写下的替代解释：OpenCore 版本不是由 1401 tag 固定的**
+
+EFI 里的 OpenCore 是构建时从 Dortania 的 build 列表**取当时最新**（`gathering_files.py:88-90`），
+只有 `windows/release-inputs.json:7` 把**发布包自带**的 RELEASE zip 钉在 `1.0.8`；而本机 `OpenCore.efi` 是 **1.0.9**。
+⇒ **Issue #34 的"1.9.0 能启动、1.10.0+ 不能"也可能是 OpenCore 1.0.8→1.0.9 的差异**，
+而不一定是 1401 的生成逻辑回归。**两种解释目前都无法排除**（用户未提供其日志与版本号）。
+
+**D. 结论等级**
+
+- 「存在一处正好落在 1.10.0 边界、命中本机 CPU 的两 Quirk 翻转」= **已证实（源码 + 提交 + 本机配置三方一致）**。
+- 「这处翻转就是本机 Recovery 起不来的原因」= **未证实**，且与上游自述证据方向相反。
+- 「Issue #34 是版本回归」= **未证实**（另一种可能是 OpenCore 版本）。
