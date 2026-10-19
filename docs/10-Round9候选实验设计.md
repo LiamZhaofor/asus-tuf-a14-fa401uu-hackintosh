@@ -847,3 +847,98 @@ kernel version reported by image = Darwin 24.6.0 (macOS 15.6)
 
 英文 Issue 草稿**仅在对话中交付审核**，未写入仓库、未提交上游、未公开任何新日志或文件。
 草稿内容已脱敏：不含 SMBIOS 身份、UUID、序列号、ROM、原始设备实例 ID 或原始日志片段。
+
+---
+
+## 13. 1401 版本回归调查（2026-10-19，只读；未改 EFI、未做启动实验）
+
+### 13.1 结论摘要（一句话）
+
+> **找到一处真实存在的、正好落在 Issue #34 所指版本边界上、且精确命中本机 CPU 代号（`phoenix` / `hawk point`）的
+> EFI 生成差异：1401 从 1.10.0 起把 AMD Zen 4/5 的 `DevirtualiseMmio` 与 `SetupVirtualMap` 由「都关」翻成「都开」。
+> 本机当前卡上是「都开」（新版行为），而「都关」（旧版行为）在本机从未被实际引导过。**
+
+⚠️ 但必须同时记住三条边界（见 13.5）：上游自己的证据方向与此相反、Issue #34 只是未证实的用户报告、
+本轮**不提议执行**任何修改。
+
+### 13.2 版本坐标（Task A）
+
+| 对象 | 事实 | 依据 |
+|---|---|---|
+| 1401 **Windows 构建器**（生成 EFI 的那个） | 本机建盘时约 **1.14.2**（2026-10-12）；`.1401-build` 只写 `built by 1401`，**未记录版本** | 本地工作区 + 卡上产物 |
+| tag ↔ commit | `v1.9.0` = `a98610cd7360…`（2026-10-10，**1.10.0 之前最后一个正式版**）<br>`v1.10.0` = `8f77036c741b…`（2026-10-10）<br>`v1.14.2` = `46d9fee308bb…`（2026-10-12） | GitHub API tags |
+| 1401 **Mac 应用** | 与 Windows 构建器**同号但不强制**（release 标题同时标 1401 与 driver 版本） | release 列表 |
+| NullMoth **NVIDIA 驱动** | 本机**未安装**；与 1401 版本号不是一回事 | 项目结论 |
+| **OpenCore** | 1.0.9 DEBUG（`OpenCore.efi` = `1569CD1D…`，与 1401 `build/` 产物**完全相同**） | 哈希比对 |
+
+`v1.9.0 → v1.14.2` 共 **43 commits / 55 files**。
+
+### 13.3 关键差异：Zen 4/5 的两条 Booter 内存映射 Quirk（Task B）
+
+**`p1401/policy.py` @ `v1.9.0`（旧行为 = 都关）**
+
+```python
+L189: if cpu.get("Manufacturer") == "AMD" and chipset not in AMD_SVM_ON and quirks.get("SetupVirtualMap") is True:
+L190:     quirks["SetupVirtualMap"] = False
+L197: if cpu.get("Manufacturer") == "AMD" and chipset not in AMD_DEVMMIO_ON and quirks.get("DevirtualiseMmio") is True:
+L198:     quirks["DevirtualiseMmio"] = False
+```
+
+**`p1401/policy.py` @ `v1.14.2`（新行为 = Zen4/5 都开）**
+
+```python
+L55:  ZEN45_CODENAMES = ("raphael", "phoenix", "hawk point", "dragon range", "granite ridge", "strix", "krackan", "fire range")
+L59:  def is_zen4_or_later(cpu):
+L239: zen45 = cpu.get("Manufacturer") == "AMD" and is_zen4_or_later(cpu)
+L240: if ... and not zen45 and quirks.get("SetupVirtualMap") is True:      → False
+L256: if ... and not zen45 and quirks.get("DevirtualiseMmio") is True:     → False
+L260: if zen45 and not (quirks.get("DevirtualiseMmio") is True and quirks.get("SetupVirtualMap") is True):
+L262:     quirks["DevirtualiseMmio"] = True
+L263:     quirks["SetupVirtualMap"]   = True
+L264:     change("amd-zen4-memory-map", ...)
+```
+
+**引入提交**：`58bda3ed00`（"Zen 4/5 first build with DevirtualiseMmio…"）、
+`1d84d96042`（"Zen 4/5: both memory-map quirks on (same-machine evidence)…"）——落在 **1.10.0 窗口**，
+与 Issue #34「1.10.0 及之后无法启动 Recovery」的时间点吻合。
+
+**上游给出的理由（`tests/test_zen4_devirt.py` 文件头，v1.14.2）**：
+> *"Zen 4 / Zen 5 Ryzen PCs stop in boot.efi at **EB.MM.AKM** with DevirtualiseMmio **off**… The first build turns it on for these CPUs; AM4 and older Zen keep it off."*
+
+**另有 1.14 起的新规则**：`L273: if zen45 and quirks.get("DisableVariableWrite") is not True:` → 强制 True
+（提交 `068e23e01e`，对应安装器 19 分钟冻结 #30）。
+
+### 13.4 本机 EFI 的对应验证（Task C，证据链）
+
+| 环节 | 结果 |
+|---|---|
+| 本机 CPU 是否命中 `ZEN45_CODENAMES` | ✅ `Phoenix`（8845HS = Hawk Point，AMD 代号 phoenix/hawk point）⇒ `is_zen4_or_later()` 为真 |
+| 本机当前两个 Quirk 的值 | `DevirtualiseMmio = true`、`SetupVirtualMap = true` ⇒ **属于 1.14.2 生成的新行为** |
+| `DisableVariableWrite` | `true` ✅（已符合 1.14 的 zen45 强制要求） |
+| 运行期佐证 | OC 日志有 `OCABC: MMIO devirt 0x… skip 0` ×5、`Valid slides - 81-255`（devirt 确实在生效） |
+| **旧行为（都关）在本机是否试过** | ❌ **从未引导过**。`docs/03` §阶梯第二档明确记：`DevirtualiseMmio=False` 那一档"**从未引导过**"（配置改了、日志仍是 `DEVMMIO 1`） |
+
+### 13.5 三条必须同时成立的边界（不得省略）
+
+1. **方向可能相反**。上游 `1d84d96042` 的依据是"Zen4/5 在 **DevirtualiseMmio 关**时停在 **boot.efi EB.MM.AKM**"，
+   即"关"才是失败方向、"开"是修复。若这条证据对笔记本同样成立，则本机当前的"都开"**本来就是对的**。
+2. **Issue #34 未证实**。同型号（Acer ANV16-41 / 8845HS / 780M / RTX 4050）用户声称旧版能装能启动，
+   但**无日志、无版本号、无复测**，也没有维护者回复（comments = 0）。
+3. **两者的症状不同**。上游证据描述的是**内核尚未打印**的 boot.efi 阶段停住；本机是**内核已打印大量日志后**停住。
+   ⇒ 同一条 Quirk 是否解释本机停点，**未确定**。
+
+### 13.6 顺带排除的三项（有原始数据支撑，非推测）
+
+| 候选 | 验证 | 结论 |
+|---|---|---|
+| Issue #21 的 etorix **AM5 DSDT 四联补丁**（NOP 掉 `OperationRegion CPVS` 内 `G000/G002/G004` 条件块） | 对本机原始 DSDT（77,592 B）做**掩码字节搜索**：四条 Find 命中数 **0 / 0 / 0 / 0**；且 `G000`、`G002`、`G004`、`CPVS`、`UP00`、`DP60` 在本机 DSDT 中**出现 0 次** | **不适用本机**（也符合"禁止照搬他板补丁"） |
+| `SSDT-PLUG-ALT`（AM5 上曾致幽灵 CPU 停住） | 本机 `SSDT-PLUG-ALT.dsl` 声明 **16** 个 `Processor (C000..C015)`（对应 8C/16T），**不是** AM5 那种 64 个；日志中 `AppleACPICPU: ProcessorId=0..15 … Enabled`，无幽灵 CPU | 该失败模式**不适用** |
+| AMD 核心数替换 | 4 条 `Force cpuid_cores_per_package` 的 Replace 为 `B8 08 00 00 00` / `BA 08 00 00 00(90)` ⇒ `mov eax/edx, **8**` | ✅ 正确 |
+
+另：本机 `ACPI → Patch` **只有 1 条**（`_OSI`→`XOSI` 重命名），没有任何 DSDT 条件块补丁。
+
+### 13.7 未作的事
+
+未修改 EFI / GPU 模式 / BIOS / NVRAM / 两块 NVMe；未做启动实验；未提出照搬他板 ACPI 补丁；
+未把 Issue #34 当成已证实的回归；未因本条差异提出本轮执行动作（是否把两条 Quirk 回退到 v1.9.0 的"都关"，
+**需用户单独批准**，且必须预先写明判据）。
