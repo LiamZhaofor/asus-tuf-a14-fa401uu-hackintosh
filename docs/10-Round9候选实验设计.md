@@ -722,3 +722,77 @@ BusNumber 描述符 **0**。
 
 **当前唯一"可直接复现、且不违反任何禁令"的可疑项是 E1 与 E3**；E2 明确只是噪声；E4 属后续阶段。
 **本轮不提出任何动作**；若下一步需要挑一个，只能在你批准后、从 E1 / E3 中选**一个**并预先写明判据。
+
+> **⚠️ 2026-10-19 用户审核：§10.7 的 E1 / E2 / E3 解释已更正，见 §11。**
+> E1 **降级为信息性日志**（推论作废）；E3 经只读核验后**降级为「当前无明确因果关系的启动日志」**。
+
+---
+
+## 11. 只读核验：Recovery 介质完整性（2026-10-19；**未修改、未重建任何介质**）
+
+### 11.1 E1 勘误（源码级，用户指正）
+
+`AppleVTD::addMemoryRange()`（本机副本 `audit/iopicifamily/AppleVTD.cpp:1316-1322`；上游 681.140.3 约 `:1321-1331`）：
+
+```cpp
+AppleVTD::addMemoryRange(IOPhysicalAddress start, IOPhysicalLength length)
+{
+    if (!(vtd = OSDynamicCast(AppleVTD, IOMapper::gSystem)))
+    {
+        IOLog("[%s()] AppleVTD is not yet installed as gSystem\n", __func__);
+```
+
+⇒ 这条日志**只说明**：`addMemoryRange()` 执行的那一刻，`IOMapper::gSystem` 不是 AppleVTD 实例。
+**它不能说明 AppleVTD 在整次启动里从未安装成功。**
+
+**撤销**：§10.7 E1 原写"`DisableIoMapper=false` 表示有 IOMMU 映射意图但 mapper 缺失"——**该推论作废**。
+本机是 **AMD Phoenix**；OpenCore 官方 AMD Zen 指南把 `DisableIoMapper` / `DisableIoMapperMapping`
+列为**不需要的 Intel VT-d / DMAR 相关 Quirk**，两个 `false` 就是 AMD 下的正常取值。
+⇒ **E1 降级为信息性日志；不据此提出任何 `Kernel → Quirks` 修改。**
+
+### 11.2 E2 措辞更正
+
+`SSDT-Disable_Network_GPP6` 加载失败是**事实**（`AE_ALREADY_EXISTS, (SSDT: DNET)`）。
+但内核在其后继续执行，**只能证明它没有立即阻止启动**，不能证明它"绝对没有后续影响"。
+
+⇒ 归类改为：**「已确认注入失败，尚无直接证据表明它导致 Recovery 启动失败」**（不再写作"只是噪声"）。
+
+### 11.3 E3：Recovery 介质的只读核验结果
+
+**对象**：卡上 `com.apple.recovery.boot\BaseSystem.dmg` 与 `BaseSystem.chunklist`。
+**方法**：只读。**未下载、未覆盖、未重建。**
+
+| 核验项 | 结果 |
+|---|---|
+| 文件存在 / 可读 | ✅ 都在；`dmg` 888,615,275 B，`chunklist` 3,352 B；mtime 均 2026-10-12 23:31:48 |
+| **两文件是否匹配** | ✅ **逐块全对**。`CNKL` 解析为：36 字节头 + 85 条（每 32B SHA-256 + u32 长度）；**85/85 块全部匹配**，覆盖 888,615,275 / 888,615,275 字节（0.81 s） |
+| **截断 / 下载中断证据** | ❌ **无**。UDIF 自身算术闭合：`dataForkLength 888,445,413 + xmlLength 169,350 + trailer 512 = 888,615,275` = 文件字节数，**精确相等**；截断文件不可能同时满足这一点与 85/85 分块哈希 |
+| UDIF 结构 | ✅ `koly` v4、headerSize 512、flags 1；XML 是合法 plist，含 8 个分区：`Protective MBR`、GPT 主/备 Header 与 Table、`Apple_Free`×2、**`disk image (Apple_HFS : 4)`** ⇒ 标准 Apple BaseSystem 版式 |
+| chunklist 尾部 | 256 B 尾随块（`trailerOffset=3096`，而 `header+count×36=3096` ✓）。**未验证其签名**（需 Apple 公钥与签名结构，离线无工具）⇒ 只能证明"文件与自身清单一致"，**不能**据此证明"由 Apple 签发" |
+| OpenCore 侧 | `OCB: Found chunklist BaseSystem.chunklist for DMG BaseSystem.dmg[10]`、`OCSB: Direct booting for DMG image` ⇒ DMG 被**找到并直接引导**（配置为 `DmgLoading = Any`，故**不声称** OpenCore 做过签名校验） |
+| **镜像的 macOS 版本** | ✅ **Darwin 24.6.0 ⇒ macOS 15.6**。依据是镜像自身内核报给补丁器的版本门控：`OC: Kernel patcher skips … due to version … <= **240600** <= …` |
+| 1401 构建记录 | `1401\build\.1401-build` 与 `build2\.1401-build` 内容都只有 `built by 1401`，**未记录版本号**；`build\EFI\OC\OpenCore.efi` 的 SHA-256 与卡上**完全相同**（`1569CD1D…`）⇒ 卡上 EFI 确由这套 1401 产物生成；工作区 1401 包为 **1.14.2**（2026-10-12 发布），与文件 mtime 同日 |
+| 镜像 vs 目标系统 | ⚠️ 镜像 **15.6**；NullMoth 自述在 **15.7.x / 15.8.1** 上测过 ⇒ **15.6 低于其测试下限**。这是**驱动阶段**的真实兼容性缺口，与"能否进 Recovery"无直接关系 |
+
+**关于 `usr\standalone\OS.dmg.root_hash` 的 `Err(0xE)`**：该路径属于**完整安装器**的 `OS.dmg` 封印卷结构
+（配 `x86legacyap.im4m` Image4 清单）；纯 Recovery 的 BaseSystem 卷本就没有它
+⇒ 这**更支持** `docs/03` 的"属预期"读法。但因无本地对照，**仍不写成定论**。
+
+### 11.4 结论
+
+> **E3 不存在安装镜像完整性或版本一致性问题。**
+> 文件与清单 85/85 逐块一致、UDIF 结构算术精确闭合、镜像自报 Darwin 24.6.0，并被 OpenCore 正常加载并直接引导。
+
+⇒ **E3 降级为「当前无明确因果关系的启动日志」；不申请重建介质。**
+⇒ 三类证据必须分开记：**① 文件级完整性 = 已验证**；**② 镜像内部（HFS+ 卷结构/内容）完整性 = 未验证**（需挂载或 UDIF 解压工具，本轮没有）；
+**③ 镜像 → 驱动阶段的版本兼容性 = 发现一处缺口（15.6 vs ≥15.7）**。
+
+**留档**（非身份信息，可公开）：
+
+```
+BaseSystem.dmg       SHA-256 = C9FFF24B410AE134C6BE17EBD4194E0AD3D73BB839A65F8D94C93A20FE97CD1E  (888,615,275 B)
+BaseSystem.chunklist SHA-256 = A8917A335E9628C2FDBB8B79AA1CBD1FBCE3DDAE60589D1FA39D86FDA30ED07F  (3,352 B)
+CNKL: count=85  84×10 MiB + 1×7,811,435 B = 888,615,275 B    85/85 hashes match
+UDIF: dataFork 888,445,413 + XML 169,350 + trailer 512 = 888,615,275 B
+kernel version reported by image = Darwin 24.6.0 (macOS 15.6)
+```
