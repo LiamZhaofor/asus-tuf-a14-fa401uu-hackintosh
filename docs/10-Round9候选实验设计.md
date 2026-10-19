@@ -391,7 +391,7 @@ BusNumber 描述符 **0**。
 | 配置 | 目标 | 判定 |
 |---|---|---|
 | DeviceProperties `Pci(0x1,0x1)/Pci(0x0,0x0)` → `acpi-wake-type=1` | **RTX 4050** | 独显模式下路径始终存在，保留 |
-| DeviceProperties `Pci(0x8,0x1)/Pci(0x0,0x0)` → `disable-gpu=true` | **780M iGPU**（`00:08.1` → 总线 `0x66`） | 路径有效；但它意味着 macOS 下**两块 GPU 都不参与显示**（dGPU 无驱动、iGPU 被关）⇒ 即使 PCI 阶段通过，Recovery 到"要画界面"那步必然黑屏。属已知限制，不是本轮停点原因 |
+| DeviceProperties `Pci(0x8,0x1)/Pci(0x0,0x0)` → `disable-gpu=true` | **780M iGPU**（`00:08.1` → 总线 `0x66`） | 路径有效。**⚠️ 初稿此处写"Recovery 必然黑屏"是错的，见 §9.1**：Recovery 走的是**固件屏幕**（`IONDRVFramebuffer` 匹配 `.Display_boot`），不需要任何 GPU 驱动，所以 iGPU 被关不影响 Recovery 显示 |
 | DeviceProperties `Pci(0x8,0x1)/Pci(0x0,0x6)` → `layout-id=56` | `1022:15E3` ACP 音频 | 实测位于 `0x66:00.6` ✅ |
 | `SSDT-Disable_Network_GPP6` | `\_SB.PCI0.GPP6.WLAN`（`Pci(0x2,0x2)`） | MT7922 仍在 bus `0x04`、父桥 `00:02.2` ⇒ 路径有效；但 `docs/03` 已证明该表因 `AE_ALREADY_EXISTS` **从未生效** |
 | `boot-args nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth` + `Drivers/NullMothLogo.efi` | NullMoth / NVIDIA 驱动 | **驱动未注入**：`Kexts/` 无 NVRM/NVRMFB/NMDRM，只有 logo 驱动；NullMoth `README.txt` 写明「**After macOS finishes installing**」才装驱动 ⇒ 这些参数当前**无消费者、纯惰性**，不是停点原因，但必须记住 |
@@ -478,3 +478,81 @@ BusNumber 描述符 **0**。
 
 若确认是"真停住"，下一个技术靶点已经明确：**新增的 OEM `NVME` SSDT 与 `IVRS` 变化**
 （它们是本次唯一被实测证实的、与停点前移同时发生的差异），且都在 PCI 配置之前生效。
+
+> **⚠️ 2026-10-19 再次修正（用户指令）**：§8.6 里"先解决录像"的要求作废 —— 操作者明确不提供录像、
+> 不做重复引导。下面 §9 改为**纯只读的可行性 + 已知前置条件复核**，不再依赖任何新观察。
+
+---
+
+## 9. 显示可行性复核与 Round 11 候选（2026-10-19，只读）
+
+### 9.1 显示路径的四层复核 —— **结论修正：Recovery 有可用显示路径**
+
+依据全部来自 NullMoth 驱动仓库的**第一方文档**（`src/nvidia-macos-driver-main/`）：
+
+| 层 | 谁在驱动它 | 是否需要 NVIDIA kext | 本机状态 |
+|---|---|---|---|
+| ① OpenCore 选择器 | 固件 GOP | 不需要 | ✅ 可见（一直可见） |
+| ② 内核早期文本（`-v`） | **固件屏幕**：`IONDRVFramebuffer` 匹配 `.Display_boot`（NVRMFB `Info.plist` 注释：`.Display_boot, probe 20000`） | **不需要** | ✅ 可见（`RTC:` 等全部输出） |
+| ③ **Recovery 图形界面** | **同 ① / ②** —— `HOW-IT-WORKS.md:90`：「The macOS installer has no NVIDIA driver, so it **runs on the firmware's screen**」 | **不需要** | ✅ **可行** |
+| ④ 安装后的加速桌面 | NullMoth：`NVRMFB`(IOFramebuffer) + `NVAccel` + `NVRMAGDC` + `NVRM` + GSP 固件 | 需要（且只能装到 `/Library/Extensions`） | 未安装（正常，安装阶段不该有） |
+
+⇒ **§8.2 里"两块 GPU 都不参与显示 ⇒ Recovery 必然黑屏"是错的，已就地更正。**
+⇒ macOS 确实有一个"通用帧缓冲"路径（`IONDRVSupport` → `IONDRVFramebuffer` → `.Display_boot` 的固件 framebuffer），
+所以 **iGPU 被 `disable-gpu` 关掉、dGPU 无 Apple 驱动，都不妨碍 Recovery 显示**。
+⇒ 这也解释了为什么屏幕能一路打到 `RTC:`：那本来就是固件屏幕在输出。
+
+**并且：驱动仓库明确要求「kext 只能装进 `/Library/Extensions`，不要从 `EFI/OC/Kexts` 注入」**
+（`README.md` §"Wiring into an existing OpenCore setup"）。⇒ **"把 kext 注入 EFI 换取安装期显示"是错的方向，已排除。**
+
+### 9.2 与第一方"安装器配方"逐项比对 —— **只差一个标量**
+
+`HOW-IT-WORKS.md:90-93` 给出的安装器（= Recovery）配方，与本机卡上配置对照：
+
+| 项 | 安装器要求（第一方原文） | 卡上现状 | 判定 |
+|---|---|---|---|
+| `Booter → Quirks → ResizeAppleGpuBars` | `0`（"small BAR"，否则固件屏幕在 macOS 的 PCI 设置后活不下来） | `0` | ✅ |
+| `UEFI → Quirks → ResizeGpuBars` | **`-1`**（UEFI 阶段**不要**动 BAR） | **`0`**（UEFI 阶段把 13→6，再"Reprogrammed BARs to original"） | **❌ 唯一不符** |
+| `Kernel → Block` | **不排除** `com.apple.iokit.IONDRVSupport` | 空列表（未排除） | ✅ |
+| `csr-active-config` | `<430A0000>` | `<43 0A 00 00>` = `0x00000A43`，与日志 `AAPL: #[EB|CSR:OUT] 0x00000A43` 一致 | ✅ |
+| `boot-args` | 含 `amfi_get_out_of_my_way=0x1 amfi=0x80 ipc_control_port_options=0` | 完全一致 | ✅ |
+| `SecureBootModel` | `Disabled` | `Disabled` | ✅ |
+| BIOS Above 4G Decoding | 开 | 开（RTX 4050 BAR1 = `0x200000000` = 8 GiB > 4 GiB，实测） | ✅ |
+| 无 `nv_disable=1` / 无 `agdpmod=pikera` / 无 WhateverGreen NVIDIA 补丁 | 无 | 无 | ✅ |
+
+⇒ **本机 EFI 与 NullMoth 官方"安装器配方"只差 `UEFI → Quirks → ResizeGpuBars` 一个整数。**
+
+### 9.3 Round 11 候选（**单变量**；未批准、未执行）
+
+**改动：`UEFI → Quirks → ResizeGpuBars`：`0` → `-1`。仅此一处，其它全部不动。**
+
+- **为什么优先**：第一方文档把 UEFI 阶段的 BAR 改动明确排除在安装器配方之外；而 `ResizeAppleGpuBars = 0`
+  保留不动，正好维持"macOS 侧小 BAR ⇒ 固件屏幕能活过 PCI 设置"这一条要求。
+  这也与已观察到的现象自洽：屏幕在早期正常、在 macOS 开始 PCI 设置之后不再更新。
+- **预期结果**：若停住与 UEFI 阶段的 BAR 重编程有关，屏幕应在 `RTC:` 之后继续出现新行，乃至出现
+  `[ PCI configuration end, bridges N, devices M ]` 或 Recovery 图形界面；
+  若屏幕仍在同一处停住，则**该假设被证伪**，说明停点与 BAR 通道无关 —— 这本身是有效结论。
+- **风险**：极低。这是**去掉一次修改**而不是引入修改；OpenCore 不再动 GPU BAR，固件原始布局保留，
+  对 Windows 只会更安全。
+- **精确 diff**（`config.plist`，`UEFI → Quirks`）：
+  ```diff
+  @@ UEFI -> Quirks @@
+      <key>ResizeGpuBars</key>
+  -   <integer>0</integer>
+  +   <integer>-1</integer>
+  ```
+  行号需在写入前用 `Select-String` 定位；`-1` 是 `integer`，不是字符串。
+- **回滚**：把该值改回 `0`（一处整数）。config 备份见 `E:\_backup-round0\config.plist.round4-restored`
+  （`021F02B3…`）；整卡回滚 `robocopy C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI <盘符>:\EFI /MIR`。
+- **它不做什么**：不改 SMBIOS、不碰 ACPI/SSDT、不碰 NVRAM、不碰两块 NVMe、不碰 Windows 引导、不切 GPU 模式。
+
+### 9.4 未纳入本轮、但属于"未来安装成功后"的已知前置（记录，不执行）
+
+| 项 | 驱动阶段要求 | 与本机现状 |
+|---|---|---|
+| `UEFI.ResizeGpuBars` / `Booter.ResizeAppleGpuBars` | `13` / `-1`（装完驱动后切换） | 现为 `0` / `0`（安装器态） |
+| `Kernel → Block` | **排除** `com.apple.iokit.IONDRVSupport` | 现为不排除（安装器态） |
+| SMBIOS | 需「能在 macOS 15 上跑且有独显」的机型，第一方测试 `iMacPro1,1` | 现为 `MacBookPro16,2`（**无独显机型**） |
+| RTX 4050 Laptop（Ada `10DE:28E1`） | 在设备表内，但**物理验证 Pending**；公开 issue 里**没有 RTX 4050 Laptop 的成功记录** | 未知，属最大不确定性 |
+
+⇒ 这几项都**只能**在 macOS 装好之后再动（1401 Mac app 会自动切换），**现在改它们没有意义**。
