@@ -47,7 +47,7 @@ python audit\pci-resource-audit.py <1401>\plan.json
 | 任何 `.aml` / `.bin` / `.efi` / `.dmg` / `.zip` / `.kext` / `*.nvram.plist` | 见 `scripts/sync-to-github.ps1` 的 forbidden-list |
 | **原始 `pnputil-all.xml`** | 3.2 MB，且逐设备带 `ContainerId` / `BaseContainerId` / 安装与到达日期 / Binary 属性块 —— **机器标识**，只留脱敏摘录 |
 | `1401/plan.json` | 含 SMBIOS 决策、真实设备实例、NVIDIA/NVML 细节，**不是**可发布产物 |
-| `audit/round9/A-*.xml`、`A-registry-logconf-all.txt` | Round 9 阶段 0 的**原始**快照：含设备实例 ID / 序列号 / 原始 PnP 属性。**只留本地**；入库的只能是 `pci-windows-audit.py` / `pci-logconf-audit.py` 产出的**脱敏对比结果** |
+| `audit/round9/A-*.xml`、`Ap-*.xml`、`*-registry-logconf-all.txt` | Round 9 阶段 0 的**原始**快照：含设备实例 ID / 序列号 / 原始 PnP 属性。**只留本地**；入库的只能是 `pci-windows-audit.py` / `pci-logconf-audit.py` 产出的**脱敏对比结果** |
 | 任何外接设备的序列号、磁盘 SN、USB4 路由器信息 | 阶段 0 可能采到；**一律不入库**，只记录"是否出现新 PCI 功能"这类事实 |
 | Linux Live 的原始 `dmesg` / `dmidecode` / `/proc/iomem` | 见 `docs/09` §6 |
 
