@@ -488,7 +488,10 @@ BusNumber 描述符 **0**。
 
 ### 9.1 显示路径的四层复核 —— **结论修正：Recovery 有可用显示路径**
 
-依据全部来自 NullMoth 驱动仓库的**第一方文档**（`src/nvidia-macos-driver-main/`）：
+依据是**两类一手来源**：① Apple 开源代码（`IOGraphics` / `xnu`）；② NullMoth 驱动仓库的第一方文档（本机 `src/nvidia-macos-driver-main/`，并与**上游 `main` 当日全文核对过**）。
+
+- **通用帧缓冲是 Apple 自己实现的**：`IOGraphics/IOGraphicsFamily/IOBootFramebuffer.cpp`，文件头注释 *"Boot video dumb frambuffer shim"*，是 `IOFramebuffer` 的子类，靠 `AAPL,boot-display` + PE console info 匹配。
+- **文本控制台与 GPU 驱动无关**：`xnu/osfmk/console/video_console.c` 的 `initialize_screen(PE_Video *boot_vinfo)`，一切绘制都写到 `vinfo.v_baseaddr`（即 booter 的 framebuffer）。
 
 | 层 | 谁在驱动它 | 是否需要 NVIDIA kext | 本机状态 |
 |---|---|---|---|
@@ -584,3 +587,37 @@ BusNumber 描述符 **0**。
 | 内屏背光是独立问题 | 需 `nvRmRegisterBacklight` + NBCI `_DSM`（`nvrm-fb.cpp:1858-1867`）；1.14.1 因"挂死引导"**移除了**自动笔记本亮度，改为 `nvrmacpibl=1` 才启用（`RELEASE-1.14.1.md:9-12`）|
 
 ⇒ **"RTX 4050 能不能用"的诚实答案：ID 被支持、代码路径覆盖、但该 SKU 从未被物理验证，且公开 issue 里没有成功记录。**
+
+### 9.5 外部案例与一手来源（2026-10-19 在线核实）
+
+**A. 安装器配方的时效性已核对（重要）**
+本机源码副本是 `1.14.2`，而上游当日为 `v2.3.7`。我拉取了**上游 `main` 的 `docs/HOW-IT-WORKS.md` 全文**核对：
+`L94-96` 仍原样写着 *"…it runs on the firmware's screen, which only survives macOS's PCI setup with a small BAR:
+`ResizeAppleGpuBars = 0`, `ResizeGpuBars = -1`, and `IONDRVSupport` not excluded."*
+⇒ **§9.2 的对照不是基于过期文档**，配方在当前版本未变。
+
+**B. 显示机制的一手依据（Apple 源码）**
+
+| 事实 | 来源 |
+|---|---|
+| macOS 有"傻瓜帧缓冲" | `IOGraphics/IOGraphicsFamily/IOBootFramebuffer.cpp`，*"Boot video dumb frambuffer shim"*，`IOFramebuffer` 子类，匹配 `AAPL,boot-display` |
+| 文本控制台不依赖 GPU 驱动 | `xnu/osfmk/console/video_console.c`：`initialize_screen(PE_Video *)`，绘制到 `v_baseaddr` |
+| 无加速时的代价 | Dortania：回落到 VESA/CPU 绘制时"many basic functions of macOS are broken… including sleep and general stability" |
+
+**C. 无加速安装器/桌面**：NullMoth 仓库有**两份独立报告**——#68 *"Install macOS 15.8.1 via 1401 installer (runs successfully in unaccelerated 25MB VESA mode)"*、#16 *"booted successfully and reached the desktop using basic framebuffer output (5MB)"*。**[COMM]** 级别，无日志佐证，但方向与第一方"安装器跑在固件屏幕上"一致。
+
+**D. 同类机器（全部带来源等级）**
+
+| 案例 | 配置 | 结果 | 等级 |
+|---|---|---|---|
+| **#155** | i7-13620H + **RTX 4060 Laptop `10de:28e0`**（与 `28E1` 同 AD107 芯片）+ BIOS Discrete | ✅ 内屏 1080p **已加速**，Metal 3 | [COMM]，最接近的正面先例 |
+| #15 | Ryzen 5800H + RTX 3070 Laptop + BIOS Discrete | ✅ eDP 可用（需 `nv_acpi _DSM` 补丁 + Algrey/Zormeister Fix PAT） | [COMM] |
+| **#252** | Arrow Lake-HX + RTX 5070 Ti，**面板硬接 dGPU、iGPU 已关** | ❌ **冻结在 EXITBS:START 之后**，未解决 | [COMM]，与本机形态最像的失败案例 |
+| 本机同型号 | amd-osx 论坛 "Asus TuF Gaming A14 FA401UU"（8845HS/780M/RTX 4050） | ❌ 版主结论"两块 GPU 都不兼容，建议用 VM" | [COMM]；**该帖早于 NullMoth 发布（2026-02-?? vs 2026-10-07）**，且无裸机 OpenCore 尝试记录 |
+| 780M iGPU | NootedRed 官方表只覆盖 Vega Raven（Ryzen 1xxx–5xxx、7x30）；RDNA3 请求 #362/#357/#238 均已关闭未实现 | **无任何驱动** | [PROJ-DOC] 高 |
+
+**E. 一条对本机配置的正面确认**：`#15` 指出混合/直连场景下 **iGPU 必须被隐藏**（`disable-gpu` 或 `-wegnoegpu`）。
+本机 `DeviceProperties` 正好对 iGPU 设了 `disable-gpu=true` ⇒ **这个设置是对的，不要删**。
+
+**F. 结论等级**：在"Phoenix/780M + Ada + 直连 eDP"这一具体组合上，**没有正面案例，也没有带日志的失败write-up**。
+⇒ 对"Recovery 能否出图形界面"只能记为 **undetermined**（机制存在且被 Apple 源码证实，但本组合无实例）。
