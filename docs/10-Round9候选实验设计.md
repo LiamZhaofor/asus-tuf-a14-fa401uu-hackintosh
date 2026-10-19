@@ -772,20 +772,27 @@ AppleVTD::addMemoryRange(IOPhysicalAddress start, IOPhysicalLength length)
 | OpenCore 侧 | `OCB: Found chunklist BaseSystem.chunklist for DMG BaseSystem.dmg[10]`、`OCSB: Direct booting for DMG image` ⇒ DMG 被**找到并直接引导**（配置为 `DmgLoading = Any`，故**不声称** OpenCore 做过签名校验） |
 | **镜像的 macOS 版本** | ✅ **Darwin 24.6.0 ⇒ macOS 15.6**。依据是镜像自身内核报给补丁器的版本门控：`OC: Kernel patcher skips … due to version … <= **240600** <= …` |
 | 1401 构建记录 | `1401\build\.1401-build` 与 `build2\.1401-build` 内容都只有 `built by 1401`，**未记录版本号**；`build\EFI\OC\OpenCore.efi` 的 SHA-256 与卡上**完全相同**（`1569CD1D…`）⇒ 卡上 EFI 确由这套 1401 产物生成；工作区 1401 包为 **1.14.2**（2026-10-12 发布），与文件 mtime 同日 |
-| 镜像 vs 目标系统 | ⚠️ 镜像 **15.6**；NullMoth 自述在 **15.7.x / 15.8.1** 上测过 ⇒ **15.6 低于其测试下限**。这是**驱动阶段**的真实兼容性缺口，与"能否进 Recovery"无直接关系 |
+| 镜像 vs 目标系统 | ⚠️ 镜像 **15.6**；NullMoth 自述"在 **15.7.x / 15.8.1** 上测过"。**⚠️ 用户审核更正：这不代表 15.7 是官方最低支持版本** ⇒ 正确表述为「**15.6 未经明确验证**」（既不是"低于最低版本"，也不是"已验证可用"） |
 
 **关于 `usr\standalone\OS.dmg.root_hash` 的 `Err(0xE)`**：该路径属于**完整安装器**的 `OS.dmg` 封印卷结构
 （配 `x86legacyap.im4m` Image4 清单）；纯 Recovery 的 BaseSystem 卷本就没有它
 ⇒ 这**更支持** `docs/03` 的"属预期"读法。但因无本地对照，**仍不写成定论**。
 
-### 11.4 结论
+### 11.4 结论（按用户 2026-10-19 裁定修订）
 
-> **E3 不存在安装镜像完整性或版本一致性问题。**
+> **在本次检查范围内未发现安装镜像完整性或版本一致性问题。**
+> （**不是**"不存在任何完整性问题"——见下方未验证项。）
 > 文件与清单 85/85 逐块一致、UDIF 结构算术精确闭合、镜像自报 Darwin 24.6.0，并被 OpenCore 正常加载并直接引导。
 
 ⇒ **E3 降级为「当前无明确因果关系的启动日志」；不申请重建介质。**
-⇒ 三类证据必须分开记：**① 文件级完整性 = 已验证**；**② 镜像内部（HFS+ 卷结构/内容）完整性 = 未验证**（需挂载或 UDIF 解压工具，本轮没有）；
-**③ 镜像 → 驱动阶段的版本兼容性 = 发现一处缺口（15.6 vs ≥15.7）**。
+⇒ 三类证据必须分开记：
+
+| 类别 | 结论 |
+|---|---|
+| ① 文件级完整性 | **已验证**（85/85 分块 + UDIF 算术闭合） |
+| ② 镜像内部完整性（HFS+ 卷结构/内容） | **未验证**（需挂载或 UDIF 解压工具） |
+| ③ Apple 签名 | **未验证**（需 Apple 公钥与签名结构；`DmgLoading = Any` 也不做签名校验） |
+| ④ 镜像 → 驱动阶段版本兼容性 | **15.6 未经明确验证**（NullMoth 自述测过 15.7.x/15.8.1，但未声明最低支持版本） |
 
 **留档**（非身份信息，可公开）：
 
@@ -796,3 +803,47 @@ CNKL: count=85  84×10 MiB + 1×7,811,435 B = 888,615,275 B    85/85 hashes matc
 UDIF: dataFork 888,445,413 + XML 169,350 + trailer 512 = 888,615,275 B
 kernel version reported by image = Darwin 24.6.0 (macOS 15.6)
 ```
+
+---
+
+## 12. 上游核查与 Issue 草稿（2026-10-19，只读；**未提 Issue、未公开任何文件**）
+
+### 12.1 任务定位
+
+用户裁定：**停止 E1/E3 排障，不安排 Round 12 启动实验**；下一步**只做一件事**——
+准备一份可提交给 `nullmoth/1401` 上游的精简英文 Issue 草稿，并只读核对 1.14.2 与更新正式版本里
+**是否真有针对 AMD Phoenix / Recovery / 早期内核启动的修复**。草稿与核查结论**先交用户审核**。
+
+### 12.2 上游 Release 扫描（58 个 release，其中本机建盘之后的 **20 个**）
+
+| 检查 | 结果 |
+|---|---|
+| 本机建盘时间 | 2026-10-12（`BaseSystem.*` mtime 23:31:48；1401 包为 **1.14.2**） |
+| 之后的正式版本 | `v1.14.3`–`v1.14.7`（10-12）、`v1.15.0`（10-13）、`v2.0.0`–`v2.3.6`（10-15…10-18），共 20 个 |
+| 关键词 `Phoenix` / `Hawk Point` / `7040` / `8040` / `8845` / `8840` / `7840` / `Ryzen 8000` | **全部 0 次命中** |
+| `v2.0.0` 提到的 EXITBS 修复 | 原文限定为 *"**Hybrid-core Intel PCs** that stopped at EXITBS:START boot, and **Intel PCs** that froze with 'No slide values are usable'"* ⇒ **仅 Intel** |
+| `v1.14.6` | 只修 **Windows 端下载**（Apple recovery-service HTTP 403 重试），并声明 *"machine-specific early boot failures remain under investigation"*（**无修复**） |
+
+### 12.3 实际代码变化（`v1.14.2...v2.3.6`，139 commits / 214 files；只看与本机有关的）
+
+| 文件 | 变更量 | 与本机关系 |
+|---|---|**
+| `p1401/bootfix.py` | **+48 / −1** | **三条新增全部不适用**：① UEFI Secure Boot 检测（`OC: Driver … cannot be loaded - Access Denied`）——本机日志该串 **0 次**（Secure Boot 已关）；② ③ no-slide 相关规则**显式 `if cpu == "Intel"`** 门控，其测试用例是 i7-13700H ⇒ 对 AMD 不触发 |
+| `p1401/acpi_dupnames.py` | **+91 / −13** | **唯一真正 AMD 相关的改动**：新增处理 `iasl` 在 DSDT 上**崩溃/停止**的情形并保留表以便修复；注释明写 *"AMD and Haswell AMI boards, 10-17"*，并举例 `\_SB.PCI0.GPP7.UP00`（本平台同族路径）。但它是**建盘/扫描期**的 ACPI 重名修复，面向 **DSDT**；本机的 `AE_ALREADY_EXISTS` 来自**固件自带 SSDT**（`WLAN`/`GpMsSsdt`）与我们自己注入的 `DNET`，**不是**这条改动能覆盖的形态 |
+| `p1401/policy.py` | +267 / −10 | 策略生成变动较大，但 release notes 中无 Phoenix/Recovery 条目与之对应 |
+| `p1401/amd_gpu.py`、`amd_rdna4.py` | 新增 | AMD **GPU 识别/实验驱动**（RX 9070 等），与 780M/启动无关 |
+
+**本机日志对照（三份最新日志各查一遍）**：`cannot be loaded - Access Denied` = **0**；
+`No slide values are usable` = **0**；`OCABC: Valid slides - 81-255`（KASLR 正常）
+⇒ **新版 `bootfix.py` 的所有新规则对本机一个都不会触发**。
+
+### 12.4 结论
+
+> **1.14.2 之后没有任何一条明确针对 AMD Phoenix、Recovery 或早期内核启动、且适用于本机的修复。**
+
+因此 Issue 草稿里**不应**声称"升级即可解决"，只能请求上游**确认/诊断**；也不建议在本轮升级 1401 或重建介质。
+
+### 12.5 草稿去向
+
+英文 Issue 草稿**仅在对话中交付审核**，未写入仓库、未提交上游、未公开任何新日志或文件。
+草稿内容已脱敏：不含 SMBIOS 身份、UUID、序列号、ROM、原始设备实例 ID 或原始日志片段。
