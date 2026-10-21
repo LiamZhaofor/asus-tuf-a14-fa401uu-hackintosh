@@ -1,0 +1,136 @@
+{
+  "_comment": [
+    "第三方 kext 的固定下载清单。URL 与 sha256 取自 1401 v2.3.6 的 p1401/mirror.json，",
+    "并已逐个下载复核（HoRNDIS / VoodooI2C / USBToolBox 三条的哈希与本机 1401 缓存完全一致）。",
+    "SimpleMtkBtFw 与 itlmt7922 是 1401 之后补装的，哈希由本项目下载后实测。",
+    "scripts/fetch-kexts.ps1 会按这份清单下载、校验、解包、放到 EFI/OC/Kexts。"
+  ],
+  "artifacts": [
+    {
+      "name": "Lilu",
+      "version": "1.7.3",
+      "url": "https://github.com/dortania/build-repo/releases/download/Lilu-0515f40/Lilu-1.7.3-RELEASE.zip",
+      "sha256": "261aebb9dc83adb6515c96405653f53c3c50b09c89babdb91fb41f7b33a1cd2a",
+      "provides": ["Lilu.kext"]
+    },
+    {
+      "name": "AMFIPass",
+      "version": "1.4.1",
+      "url": "https://github.com/dortania/OpenCore-Legacy-Patcher/raw/main/payloads/Kexts/Acidanthera/AMFIPass-v1.4.1-RELEASE.zip",
+      "sha256": "07b266145906db41f4b13a7938fbb173ea28888cc1fa65f84417f8820adc961e",
+      "provides": ["AMFIPass.kext"]
+    },
+    {
+      "name": "AppleALC",
+      "version": "1.9.9",
+      "url": "https://github.com/dortania/build-repo/releases/download/AppleALC-ff01db2/AppleALC-1.9.9-RELEASE.zip",
+      "sha256": "68c13a7712077d6de9978f03361dc31ee762011e0a6b80324ccd74247bc67062",
+      "provides": ["AppleALC.kext"]
+    },
+    {
+      "name": "BrcmPatchRAM",
+      "version": "2.7.3",
+      "url": "https://github.com/dortania/build-repo/releases/download/BrcmPatchRAM-6538902/BrcmPatchRAM-2.7.3-RELEASE.zip",
+      "sha256": "71a4bdf9d0804f16f4f9a35f5b67288cd680eda44e4347cd60640f2e422299ea",
+      "provides": ["BlueToolFixup.kext"]
+    },
+    {
+      "name": "BrightnessKeys",
+      "version": "1.0.4",
+      "url": "https://github.com/dortania/build-repo/releases/download/BrightnessKeys-37bdf47/BrightnessKeys-1.0.4-RELEASE.zip",
+      "sha256": "8fc2be5041801cc4fbf481153034b975ed18e02af312d6316531ee859f764126",
+      "provides": ["BrightnessKeys.kext"]
+    },
+    {
+      "name": "HoRNDIS",
+      "version": "9.3 (rel9.3_2, x86_64 + arm64e)",
+      "url": "https://github.com/TomHeaven/HoRNDIS/releases/download/rel9.3_2/Release.zip",
+      "sha256": "8f9641ab02744ec6a6e74a1480babf36fbf8228533079ba0782ba016cf2968c3",
+      "provides": ["HoRNDIS.kext"]
+    },
+    {
+      "name": "AppleMCEReporterDisabler",
+      "version": "1.2",
+      "url": "https://github.com/acidanthera/bugtracker/files/3703498/AppleMCEReporterDisabler.kext.zip",
+      "sha256": "470417c4958dd6ecb982182140a6b76cf85f847c15f1b0f6f59617d5abcc5f76",
+      "provides": ["AppleMCEReporterDisabler.kext"]
+    },
+    {
+      "name": "NVMeFix",
+      "version": "1.1.4",
+      "url": "https://github.com/dortania/build-repo/releases/download/NVMeFix-4862220/NVMeFix-1.1.4-RELEASE.zip",
+      "sha256": "8c0c9b83f6f36db59a963ab91205a5d26aa9b368736b3b885ee8fa9ad90f6e9e",
+      "provides": ["NVMeFix.kext"]
+    },
+    {
+      "name": "RestrictEvents",
+      "version": "1.1.7",
+      "url": "https://github.com/dortania/build-repo/releases/download/RestrictEvents-9265e78/RestrictEvents-1.1.7-RELEASE.zip",
+      "sha256": "e5a8c15adeba9251be2709899214fe7fd847f6d38fca6c09adb65e9b2af64f0a",
+      "provides": ["RestrictEvents.kext"]
+    },
+    {
+      "name": "Sinetek-rtsx",
+      "version": "9.0",
+      "url": "https://github.com/cholonam/Sinetek-rtsx/releases/download/Releases%2Fv9.0/Sinetek-rtsx-9.0.zip",
+      "sha256": "91709ab1898ac7437c83480a0d43de945401ccf8aa7f0a9c1081aea01099597d",
+      "provides": ["Sinetek-rtsx.kext"]
+    },
+    {
+      "name": "USBToolBox",
+      "version": "1.2.0",
+      "url": "https://github.com/USBToolBox/kext/releases/download/1.2.0/USBToolBox-1.2.0-RELEASE.zip",
+      "sha256": "c315a3a5acfd496dd97d0d19b4fbd1d487103d2fd541c5651583d4c9cebcfe07",
+      "provides": ["USBToolBox.kext", "UTBDefault.kext"]
+    },
+    {
+      "name": "VirtualSMC",
+      "version": "1.3.9",
+      "url": "https://github.com/dortania/build-repo/releases/download/VirtualSMC-b5c62c2/VirtualSMC-1.3.9-RELEASE.zip",
+      "sha256": "0d020ad354fc72f9143b0cc4d57335e9f3a61c9c3b1f8ccf7b332223d8a541c5",
+      "provides": ["VirtualSMC.kext", "SMCBatteryManager.kext", "SMCLightSensor.kext"]
+    },
+    {
+      "name": "VoodooI2C",
+      "version": "2.9.1",
+      "url": "https://github.com/dortania/build-repo/releases/download/VoodooI2C-5c0c99c/release.zip",
+      "sha256": "2347e42fb09f2386b47f4c02b265441bc5f3cf344d1ff168daed93a6b6c411e3",
+      "provides": ["VoodooI2C.kext", "VoodooI2CHID.kext"]
+    },
+    {
+      "name": "VoodooPS2Controller",
+      "version": "2.3.8",
+      "url": "https://github.com/dortania/build-repo/releases/download/VoodooPS2-7eab4a3/VoodooPS2Controller-2.3.8-RELEASE.zip",
+      "sha256": "4008968674f0fae549c656d9f55af3e689e0b335cb33b4484bf94ab237357016",
+      "provides": ["VoodooPS2Controller.kext"]
+    },
+    {
+      "name": "WhateverGreen",
+      "version": "1.7.2",
+      "url": "https://github.com/dortania/build-repo/releases/download/WhateverGreen-093e76f/WhateverGreen-1.7.2-RELEASE.zip",
+      "sha256": "59a1fe3d64b2e57925c806985c88bb69ce0a6bbeea5980ca11551b0e7ddf55b9",
+      "provides": ["WhateverGreen.kext"]
+    },
+    {
+      "name": "SimpleMtkBtFw",
+      "version": "1.0.0",
+      "url": "https://github.com/laobamac/SimpleMtkBtFw/releases/download/1.0.0/SimpleMtkBtFw-1.0.0-RELEASE.zip",
+      "sha256": "b6afbe453db5827e7e2c8cdd045374f4fa6760f63e6ae26a3f322aa75dc84954",
+      "provides": ["SimpleMtkBtFw.kext"]
+    },
+    {
+      "name": "itlmt7922",
+      "version": "0.2.2",
+      "url": "https://github.com/hbyonly1/itlmt7922-wifi/releases/download/v0.2.2/itlmt7922.kext-0.2.2.zip",
+      "sha256": "4065c9356ea1b39002a8fa7f00b262232f43a3439d9c617d76e82aff7c4639ff",
+      "provides": ["itlmt7922.kext"]
+    }
+  ],
+  "not_fetchable": [
+    {
+      "path": "EFI/OC/Tools/NullMothSafe.efi",
+      "reason": "只随 1401（PolyForm Noncommercial 1.0.0）分发，没有公开直链。",
+      "how": "用 1401 构建过一次之后，它就在 %LOCALAPPDATA%\\NullMoth\\1401 的 OCK_Files 缓存或已写好的 ESP（EFI/OC/Tools/NullMothSafe.efi）里；fetch-kexts.ps1 会自动去这些位置找并复制过来。"
+    }
+  ]
+}

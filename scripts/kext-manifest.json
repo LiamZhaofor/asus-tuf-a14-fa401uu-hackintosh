@@ -1,0 +1,130 @@
+{
+  "AMFIPass.kext": {
+    "bundle_id": "com.dhinakg.AMFIPass",
+    "version": "1.4.1",
+    "binary": "Contents/MacOS/AMFIPass",
+    "sha256": "4c35bc196d35c69b5f9dca83fe733801211c7828716f51585c7f5450039ca884"
+  },
+  "AppleALC.kext": {
+    "bundle_id": "as.vit9696.AppleALC",
+    "version": "1.9.9",
+    "binary": "Contents/MacOS/AppleALC",
+    "sha256": "21d5ffbf515aba5f9cacf48c0d4bd0b11189cb844133f696f027fd5d7998e9dd"
+  },
+  "AppleMCEReporterDisabler.kext": {
+    "bundle_id": "org.xlnc.disabler.MCEReporter",
+    "version": null
+  },
+  "BlueToolFixup.kext": {
+    "bundle_id": "as.acidanthera.BlueToolFixup",
+    "version": "2.7.3",
+    "binary": "Contents/MacOS/BlueToolFixup",
+    "sha256": "e11fc0299c230e716fbbb9d2eb6df54c1494338a9201f903bab22c410ff57f0b"
+  },
+  "BrightnessKeys.kext": {
+    "bundle_id": "as.acidanthera.BrightnessKeys",
+    "version": null,
+    "binary": "Contents/MacOS/BrightnessKeys",
+    "sha256": "f47210181030a6005ccb17c125dbe81b359c2c9fd74c12b99b860b8b5f44a72a"
+  },
+  "HoRNDIS.kext": {
+    "bundle_id": "com.joshuawise.kexts.HoRNDIS",
+    "version": null,
+    "binary": "Contents/MacOS/HoRNDIS",
+    "sha256": "d7ec97a3a6c26a96e806d7a660ad26d13863352bba539e9ba10ea3c3b66a1408"
+  },
+  "Lilu.kext": {
+    "bundle_id": "as.vit9696.Lilu",
+    "version": "1.7.3",
+    "binary": "Contents/MacOS/Lilu",
+    "sha256": "e3f00df5aca98c70363489292514f088ae3b667417c9c5afdd33799ff09390bd"
+  },
+  "NVMeFix.kext": {
+    "bundle_id": "org.acidanthera.NVMeFix",
+    "version": "1.1.4",
+    "binary": "Contents/MacOS/NVMeFix",
+    "sha256": "d32c743220011f162ac104cdf73b1bce71cca77459a54553e461b89b9837a4d6"
+  },
+  "RestrictEvents.kext": {
+    "bundle_id": "as.vit9696.RestrictEvents",
+    "version": "1.1.7",
+    "binary": "Contents/MacOS/RestrictEvents",
+    "sha256": "8a244c696234c4ae1dec7c318664c57b685f9d2501e8bb6649ec805b21e9fa3a"
+  },
+  "RogProbe2.kext": {
+    "bundle_id": "com.zhao.RogProbe2",
+    "version": "1.0.0",
+    "binary": "Contents/MacOS/RogProbe2",
+    "sha256": "045ae78ece101abfa01e66debfccaceee5fb757c7aa3f3d39fbd5c7d942675ca"
+  },
+  "SMCBatteryManager.kext": {
+    "bundle_id": "ru.usrsse2.SMCBatteryManager",
+    "version": "1.3.9",
+    "binary": "Contents/MacOS/SMCBatteryManager",
+    "sha256": "791d81018a5374ddc63b8d97ba976e03bab6d241fec08ec3487e4c4e74fc24e4"
+  },
+  "SMCLightSensor.kext": {
+    "bundle_id": "ru.usrsse2.SMCLightSensor",
+    "version": "1.3.9",
+    "binary": "Contents/MacOS/SMCLightSensor",
+    "sha256": "b3aca78cd5aca2fb4229bb7fb1258bb04f54af391605d29dac92438193346606"
+  },
+  "SimpleMtkBtFw.kext": {
+    "bundle_id": "com.laobamac.SimpleMtkBtFw",
+    "version": "1.0.0",
+    "binary": "Contents/MacOS/SimpleMtkBtFw",
+    "sha256": "8079337d3bd2ef9e2d886ca8987272a4823ddb9bfc80502e28f4d075d0fd660b"
+  },
+  "Sinetek-rtsx.kext": {
+    "bundle_id": "com.sinet3k.Sinetek-rtsx",
+    "version": "9.0.0",
+    "binary": "Contents/MacOS/Sinetek-rtsx",
+    "sha256": "909d7f7bcb504781c2a85abdcd01cc53bfa1770d9295e6d8addd487a21461bb4"
+  },
+  "USBToolBox.kext": {
+    "bundle_id": "com.dhinakg.USBToolBox.kext",
+    "version": null,
+    "binary": "Contents/MacOS/USBToolBox",
+    "sha256": "c5c8dc205a079ee3f90b7875fb5ff622e4f15d32f29cf519123dab2822c422b7"
+  },
+  "UTBDefault.kext": {
+    "bundle_id": "com.dhinakg.USBToolBox.injector",
+    "version": "1.0"
+  },
+  "VirtualSMC.kext": {
+    "bundle_id": "as.vit9696.VirtualSMC",
+    "version": "1.3.9",
+    "binary": "Contents/MacOS/VirtualSMC",
+    "sha256": "bf91e9542b86c20acaf210353a93742291c49328e2d14b03fa0fa4fc52b3b5ce"
+  },
+  "VoodooI2C.kext": {
+    "bundle_id": "com.alexandred.VoodooI2C",
+    "version": "2.9.1",
+    "binary": "Contents/MacOS/VoodooI2C",
+    "sha256": "dbb7865eec4eeb0ea4e303789407c8cbbbfa3a944780191bd9943279c64ebe9f"
+  },
+  "VoodooI2CHID.kext": {
+    "bundle_id": "com.alexandred.VoodooI2CHID",
+    "version": "1.0",
+    "binary": "Contents/MacOS/VoodooI2CHID",
+    "sha256": "1ba930b05d5c786b97353a63767fab090125d8d3e665443db4e07e46ab8b2e53"
+  },
+  "VoodooPS2Controller.kext": {
+    "bundle_id": "as.acidanthera.voodoo.driver.PS2Controller",
+    "version": "2.3.8",
+    "binary": "Contents/MacOS/VoodooPS2Controller",
+    "sha256": "be6f3aa9dc88954462e422df78d8d7d129cb91b8fd03c4018ef04cc9f472e8f0"
+  },
+  "WhateverGreen.kext": {
+    "bundle_id": "as.vit9696.WhateverGreen",
+    "version": "1.7.2",
+    "binary": "Contents/MacOS/WhateverGreen",
+    "sha256": "059967ba94fba6cbf3c2cdf40fb4277e00a2a42bc1aa250e632103acbc3efdd0"
+  },
+  "itlmt7922.kext": {
+    "bundle_id": "local.experimental.itlmt7922",
+    "version": "0.2.2",
+    "binary": "Contents/MacOS/itlmt7922",
+    "sha256": "818f0ade87838987e609747253da6b2d5f7e1e3b1f9415f6bdc25634c7643d2a"
+  }
+}

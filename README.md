@@ -51,13 +51,13 @@
 | 亮度键 / 音量键 | ✅ | BrightnessKeys |
 | 键盘 | ✅ | VoodooPS2Controller（PS/2 接口） |
 | 电池百分比 / 电源 | ✅ | SMCBatteryManager + `SSDT-ADP1`（伪装 AC，修 USB-C PD 显示） |
-| 触摸板 | ⚠️ | VoodooI2C + VoodooGPIO + VoodooI2CHID 已注入并加载，多指手势未逐个验收 |
-| 蓝牙 | ⚠️ | `SimpleMtkBtFw` 已匹配本机 `0489:e0f6`，配对/传输未实测 |
+| 触摸板 | ✅ | VoodooI2C + VoodooGPIO + VoodooI2CHID，实测正常 |
+| 蓝牙 | ⚠️ | `SimpleMtkBtFw` 已匹配本机 `0489:e0f6`、驱动已加载；配对与传输**未测试** |
 | Wi-Fi | ⚠️ | `itlmt7922` 实验驱动：**能连、能跑 866 Mbps，但高负载约 1 小时后固件 coredump 掉线** |
 | 有线网络 | ❌ | 本机无 RJ45。USB 网卡只认 **RTL8153** 类；RTL8156 不认 |
 | 安卓 USB 共享 | ⚠️ | HoRNDIS 9.3 已注入，macOS 能识别出网络服务但链路起不来（`status: inactive`），未打通 |
 | 读卡器 | ⚠️ | Sinetek-rtsx |
-| 睡眠 / 唤醒 | ❌ 未验证 | NVIDIA 驱动与本配置都没做过睡眠验收，建议先禁用睡眠 |
+| 睡眠 / 唤醒 | ❌ **无法睡眠** | 实测：睡下去就醒不回来。装完请关掉睡眠与合盖休眠（见下） |
 | AirDrop / 接力 / 通用控制 | ❌ | 依赖原生 Wi-Fi 卡，MT7922 没有 |
 | iMessage / FaceTime | ❌ | 需要真实三码 + 原生 Wi-Fi，这里都没有 |
 
@@ -66,16 +66,20 @@
 ## 快速上手（已经有本机 Win/macOS 双系统的人）
 
 ```text
-1. 挂载 ESP，把本仓库 EFI/ 整个复制进去（ESP 根只剩 EFI/ 一个目录）
-2. 用 1401 重新生成你自己的 SMBIOS 三码，替换 EFI/OC/config.plist 里
+1. 先拉 kext（仓库不存第三方二进制，见「第三方组件与许可」）
+       pwsh -File scripts/fetch-kexts.ps1
+   → 按固定 SHA256 下载 17 个压缩包，解出 22 个 kext 到 EFI/OC/Kexts，并逐个核对二进制哈希
+2. 挂载 ESP，把本仓库 EFI/ 整个复制进去（ESP 根只剩 EFI/ 一个目录）
+3. 用 1401 重新生成你自己的 SMBIOS 三码，替换 EFI/OC/config.plist 里
    PlatformInfo → Generic 的 SystemSerialNumber / MLB / SystemUUID / ROM
-3. 重启 → Esc 选 OpenCore
+4. 重启 → Esc 选 OpenCore
 ```
 
 从零开始的完整流程见 [安装手册](docs/02-安装手册.md)；下面只写**这次真正成功用的那条路**。
 
 > 不想 clone 整个仓库？[**最新 Release**](https://github.com/LiamZhaofor/asus-tuf-a14-fa401uu-hackintosh/releases/latest)
-> 里有打好包的 `EFI-<日期>.zip`（同样是这份 `EFI/`，config 已脱敏）+ `SHA256SUMS.txt`。
+> 里有打好包的 `EFI-<日期>.zip`（**已包含第三方 kext**，开箱可引导，config 同样已脱敏）
+> + `SHA256SUMS.txt`。走 Release 就不需要跑 fetch 脚本。
 
 ---
 
@@ -173,12 +177,18 @@ EFI/
 └── OC/
     ├── ACPI/          7 张 SSDT
     ├── Drivers/       HfsPlus / OpenRuntime / ResetNvramEntry
-    ├── Kexts/         22 个 kext（29 条 Kernel/Add，含 4 条 PlugIns 子项）
+    ├── Kexts/         只有 RogProbe2.kext（本项目自研）
+    │                  ← 其余 21 个第三方 kext 由 scripts/fetch-kexts.ps1 拉取
     ├── Resources/     OpenCanopy GoldenGate 主题 + 字体（3.5 MB）
-    ├── Tools/         NullMothSafe.efi（NVIDIA 驱动救急）
     ├── OpenCore.efi
-    └── config.plist   ← 已脱敏，SMBIOS 四字段为零
+    └── config.plist   ← 已脱敏；配置里引用 29 条 Kernel/Add
 ```
+
+仓库树里**不含第三方 kext 二进制**（也**没有** `Tools/NullMothSafe.efi`），原因见
+[第三方组件与许可](#第三方组件与许可)。跑一次 `scripts/fetch-kexts.ps1` 会把 22 个 kext 补齐，
+并按 `scripts/kext-manifest.json` 逐个核对二进制 SHA256；`NullMothSafe.efi` 只能从
+1401（或已有 ESP）取，脚本会去几个常见位置找，找不到只警告——那两条 `1401:` 菜单项不会出现，
+不影响正常启动。
 
 ACPI 表：`SSDT-EC`、`SSDT-PLUG-ALT`、`SSDT-USB-Reset`、`SSDT-USBX`、`SSDT-XOSI`、
 `SSDT-ADP1`（伪装 AC）、`SSDT-ROG`；配套 `ACPI → Patch` 的 `_OSI → XOSI` 重命名。
@@ -240,7 +250,7 @@ PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)  acpi-wake-type: 1   ← 唤醒类型
 | 卡 `[PCI configuration begin]` | PCI 总线枚举死锁 | 启用 `CaseySJ IOPCIIsHotplugPort` 补丁 + 删 `IVRS` + `DisableIoMapper` |
 | 卡 `NVNe: bar1: placing BAR1 8192 MB …` | NullMoth 驱动重排 root port 的 64 位窗口时挂住（**冷启动**最容易触发） | OpenCore 菜单 → **`1401: Start once without NVIDIA driver`**（只这次不加载驱动）；反复出现就用 **`1401: Remove NVIDIA driver`** |
 | Wi-Fi 连上一小时后掉线、之后一直「连接失败」 | 固件 coredump，芯片进死状态，驱动自恢复失败 | **彻底断电**（关机 → 拔电源 → 长按电源 10 s → 开机），单纯重启不够 |
-| 睡眠后黑屏 / 醒不过来 | NVIDIA 驱动未验收睡眠 | 装完先去「系统设置」把睡眠关掉 |
+| 睡眠后黑屏 / 醒不过来 | **实测无法睡眠**（睡下去唤不醒） | 装完先关睡眠：`sudo pmset -a sleep 0 hibernatemode 0 standby 0 autopoweroff 0`；合盖休眠也在「系统设置 → 电池/锁定屏幕」里关掉 |
 
 > 冷启动比热重启更容易踩 BAR1 那条。**尽量用重启而不是关机**，能躲掉大部分情况。
 
@@ -285,7 +295,7 @@ PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)  acpi-wake-type: 1   ← 唤醒类型
 ## 仓库结构
 
 ```text
-EFI/                    完整可引导 EFI（143 文件 / 14 MB，config 已脱敏）
+EFI/                    可引导树（config + ACPI + OpenCore + 自研 RogProbe2），不含第三方 kext
 hardware/               本机配置摘要
 docs/                   完整调查过程（中文，按轮次）
   01-可行性评估.md
@@ -300,7 +310,13 @@ docs/                   完整调查过程（中文，按轮次）
   12-候选配置说明.md
 audit/                  PCI 资源 / 日志配置审计脚本与结果
 logs/                   真实 OpenCore 引导日志（已脱敏）
-scripts/                同步、脱敏、配置叠加等脚本
+scripts/
+  fetch-kexts.ps1       ← 按固定哈希拉齐 22 个 kext（本仓库不再存第三方二进制）
+  kext-pins.json        17 个上游压缩包的 URL + SHA256（取自 1401 mirror.json 并复核）
+  kext-manifest.json    22 个 kext 的 bundle id / 版本 / 二进制 SHA256（本机实测）
+  sync-to-github.ps1    最早那套"把卡上状态同步到 GitHub"的脚本
+  sanitize-config.py    抹掉 SMBIOS 身份字段
+  …                     其余为配置叠加 / 日志脱敏脚本
 NOTICE.md               第三方组件与许可
 ```
 
@@ -308,15 +324,21 @@ NOTICE.md               第三方组件与许可
 
 ## 第三方组件与许可
 
-本仓库**现在包含第三方二进制**（`EFI/OC/Kexts`、`EFI/OC/Tools`）。
-每个组件的上游、版本与许可见 [NOTICE.md](NOTICE.md)。要点：
+**仓库树不含第三方二进制。** `EFI/` 里只有 OpenCore 自己的文件（BSD-3-Clause）、
+本项目生成的 ACPI/config，以及自研的 `RogProbe2.kext`。
+22 个第三方 kext 用 `scripts/fetch-kexts.ps1` 按固定 SHA256 从上游拉取，
+清单见 `scripts/kext-pins.json`，来源与许可见 [NOTICE.md](NOTICE.md)。
+
+要点：
 
 - **NullMoth NVIDIA 驱动 / 1401**：**PolyForm Noncommercial 1.0.0 —— 禁止商业使用**。
-  本仓库里的 `NullMothSafe.efi` 来自 1401，仅用于非商业的个人实验
-- **OpenCore**：BSD-3-Clause
+  驱动本体（`NVRM/NVAccel/NVRMFB`）从不进本仓库，只由 `1401.app` 装进 macOS；
+  `NullMothSafe.efi` 同样只在本地从 1401 取
+- **OpenCore**：BSD-3-Clause（`EFI/BOOT`、`EFI/OC/Drivers`、`EFI/OC/Resources`、`OpenCore.efi`）
 - **AMD_Vanilla 内核补丁**：只是 config 里的字节序列，来源 AMD-OSX/AMD_Vanilla
-- 各 kext 版权归各自作者；长期使用请到上游取最新版（[NOTICE.md](NOTICE.md) 有全部链接）
-- 若某上游作者不希望二进制出现在这里，开 issue，我会立即移除
+- ✅ **打好的 Release zip 里包含第三方 kext**（方便直接用），但库里不存；
+  如果你要完全避开第三方二进制，用仓库 + fetch 脚本这条路
+- 若某上游作者不希望其产物被这样聚合，开 issue，我会立即移除对应条目
 
 ---
 
@@ -337,4 +359,6 @@ NOTICE.md               第三方组件与许可
   用 `startosinstall --forcequitapps` 替代已删除的 `--nointeractive`
 - ✅ 定位并修掉 `nvfbhidpi=1` 导致的冷启动 BAR1 死锁
 - ✅ 接入 MT7922 Wi-Fi（itlmt7922 v0.2.2），记录固件 coredump 的完整证据链与缓解参数
-- ✅ 上传完整 EFI（此前仓库只有一份 config.plist）
+- ✅ 实测结论补完：**触摸板正常**、**无法睡眠**；蓝牙驱动已加载但**未测试**
+- ✅ 仓库策略调整：第三方 kext 不再入库，改由 `scripts/fetch-kexts.ps1` 按固定 SHA256 拉取
+  （17 个上游包 → 22 个 kext，全部哈希与本机实测一致）；需要开箱即用的走 Release zip
