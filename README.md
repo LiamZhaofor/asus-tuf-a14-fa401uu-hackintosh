@@ -1,692 +1,337 @@
-# ASUS TUF Gaming A14 (FA401UU) — macOS 15 Sequoia + NVIDIA RTX 4050
+# ASUS TUF Gaming A14 (FA401UU) — macOS 15 Sequoia + RTX 4050 Laptop
 
-> 用 [NullMoth NVIDIA 驱动](https://github.com/nullmoth/nvidia-macos-driver) 在 **RTX 4050 Laptop** 上跑起硬件加速的 macOS 15 Sequoia。
-> 本仓库记录这台具体机型的完整踩坑过程、已验证配置、真实引导日志与排错脚本。
->
-> **状态：进行中（未安装完成）。** 第一轮修好了"`boot-args` 从未生效"这个把此前所有结论都
-> 污染掉的问题；第二轮（禁用 VoodooI2C 家族）六项预注册检查**全部符合预期**。
-> 第三轮（只移除 `npci=0x2000`）已正式记录为「**实验配置生效，但未能成功启动**」——
-> 配置侧有日志实证，屏幕侧在 `RTC: Only single RAM bank` 处 **≥10 分钟无输出且未进 Recovery**；
-> 该行**不是**已确认死因，且**未**据此排除 npci 的影响。
-> 第四轮（MAT 内存映射三元组）**已写入卡上、待引导验证** —— 见
-> [受控实验记录](docs/05-受控实验记录.md) 与 [引导排错实录](docs/03-引导排错实录.md)。
+**状态：已装好，可正常进系统并使用（2026-10-20）。**
+本仓库现在包含一套**实测可引导的完整 EFI**（`EFI/`，143 个文件 / 14 MB），
+以及从"卡在 `[PCI configuration begin]`"一路到"装完之后怎么联网"的全部证据、踩坑记录与脚本。
 
----
-
-## 这台机器
-
-| 部件 | 型号 | macOS 侧结论 |
-|---|---|---|
-| 机型 | ASUS TUF Gaming A14 **FA401UU** | BIOS `FA401UU.311`，UEFI |
-| CPU | **AMD Ryzen 7 8845H**（Zen 4 / Hawk Point，8C/16T） | ✅ 可用，需 AMD_Vanilla 内核补丁 |
-| 核显 | AMD Radeon 780M (`1002:1900`) | ❌ macOS 无驱动 → 用 `disable-gpu` 屏蔽 |
-| 独显 | **NVIDIA RTX 4050 Laptop** (`10DE:28E1`, AD107) | ⚠️ 在驱动设备表内，Ada 家族未验证 |
-| 内屏 | BOE NE140QDM-NX7，**2560×1600 @165Hz**，eDP | ⚠️ 需 MUX 切「独显直连」才能由 N 卡驱动 |
-| 内存 | 16GB LPDDR5X-7500（板载） | ✅ |
-| 硬盘 | WD PC SN740 512G NVMe | ✅ 与 Windows 共用，分出 128GiB 给 macOS |
-| 无线 | MediaTek MT7922 (RZ616) | ❌ 无驱动，且被 SSDT 主动屏蔽 |
-| 声卡 | Realtek ALC256 | ⚠️ AppleALC `layout-id 56`（该 ID 在 AppleALC 1.9.9 中确实存在） |
-| 有线 | 无 RJ45 口 | ❌ USB 网卡仅 RTL8153 类可用（RTL8156 不行） |
-
-关键前提：**FA401 系列有 MUX 开关**。必须先在 Armoury Crate 里切到「独显直连 / Ultimate」，
-官方扫描工具才会报告 `Monitor: NE140QDM-NX7, Connected GPU: NVIDIA GeForce RTX 4050 Laptop GPU` ——
-这是内屏能被点亮的必要条件（否则内屏挂在无驱动的 780M 上，必然全黑）。
-
----
-
-## 已验证清单
-
-| 项目 | 结果 | 证据 |
-|---|---|---|
-| U 盘 OpenCore 引导 | ✅ | MBR + active FAT32，走 `\EFI\BOOT\BOOTX64.EFI`，实机启动成功 |
-| OpenCore 配置合法性 | ✅ | 官方 `ocvalidate` 1.0.9：**0 issues**（与 U 盘上 `DBG-109` 同版本） |
-| boot.efi 交接 | ✅ | 日志出现 `AAPL: #[EB|LOG:EXITBS:START]` |
-| macOS 内核启动 | ✅ | `AppleACPICPU ×16`、`IOAPIC`、`ACPI: Executed 29 blocks`、`RTC:` 均已在屏幕上出现 |
-| kext 加载 | ✅ | 25 个 kext 全部 `Prelinked injection … Success`，`OC: Prelinked status - Success` |
-| AMD 内核补丁 | ✅ | 27 条全部命中；核心数补丁确认为 **8 核**；Zen4 IOPCIFamily 与 Sequoia PAT 补丁版本门控正确 |
-| `boot-args` 实际生效 | ✅ | 第一轮修复后：`OC: Deleting NVRAM …:boot-args - Success` → `OCVAR: Setting NVRAM …:boot-args - Success`，且 `MBA:OUT` 含 `npci=0x2000` |
-| 内屏由 N 卡驱动 | ✅ | 官方扫描工具的输出 |
-| 安装 macOS | ⬜ | 当前停在 AMD I2C 控制器 `start()`，见下 |
-
----
-
-## 卡点与解法（含两处勘误）
-
-完整证据（日志行 + 上游源码行号）见 **[docs/03-引导排错实录.md](docs/03-引导排错实录.md)**；
-每一步改动的实验设计与回滚见 **[docs/05-受控实验记录.md](docs/05-受控实验记录.md)**。
-
-### 1. 选择器停在 `Timeout` —— 其实只是慢，不是死机
-
-第一反应会以为是键盘不工作。**不是。** OpenCore 日志显示倒计时正常走完并自动选中了安装器：
-
-```
-09:988 05:020 OCHK: FreeHotKeys
-10:021 00:010 OCB: Should boot from 1. 1401 (T:4|F:1|G:0|E:1|DEF:0)
-```
-
-真正的"卡"是 [DMG 分块校验](https://github.com/acidanthera/OpenCorePkg)（85 个分块 / 847 MiB 的 SHA-256）。
-`DmgBootSupport.c` 里每个*失败*分支才打日志，**成功路径按设计完全静默**，所以看起来像死机，
-其实在算 —— 实测这段要 **27.45 秒**（U 盘只有 38.9 MB/s）。
-**等 1–2 分钟就过去了**，或者把 `Misc → Security → DmgLoading` 设为 `Any` 直接跳过。
-
-> 我们第一份日志（`logs/opencore-2026-10-12-233441.txt`）就是**死在这一段**的，
-> 它只有 43 KB、没有 `AAPL:` 行、`boot.efi` 从未启动。**别把它当成一次"引导失败"。**
-
-### 2. `PCI configuration begin` → `npci=0x2000` **其实从来没有生效**
-
-第一次我们加了 `npci=0x2000` 并认为"越过了"。**这个归因是错的。**
-
-四份日志一起看：**在所有有日志的引导里，内核拿到的 `boot-args` 里都没有 `npci=0x2000`。**
-
-```
-OCVAR: Setting NVRAM 7C436110-...:boot-args - ignored, exists
-AAPL: #[EB|MBA:NV]  <"-v debug=0x100 ... ipc_control_port_options=0 slide=246">
-AAPL: #[EB|MBA:OUT] <"-v debug=0x100 ... ipc_control_port_options=0 slide=246">
-```
-
-原因是 OpenCore 的机制（`OpenCoreNvram.c`）：`OcDeleteNvram()` 先跑、`OcAddNvram()` 后跑，
-而 `OcAddNvram` **硬编码 `Overwrite = FALSE`** —— 变量已存在就只打印 `ignored, exists`，不写。
-唯一能清掉它的是 `Delete` 阶段，而当时 `Delete` 里**没有 `boot-args`**。
-→ 变量被第一次引导写入的值永久冻住了。
-
-**教训：判断"配置是否生效"必须看日志里的 `OCABC:` / `OCVAR:` / `AAPL: #[EB|MBA:OUT]`，
-而不是看 `config.plist` 写了什么。** 详见 [排错实录](docs/03-引导排错实录.md) 第 2 节。
-
-### 3. 内核跑得很远，然后停住 —— booter 内存映射 quirk（进行中）
-
-内核推进得很深，最后几行（照片裁切放大后读取）：
-
-```
-AppleACPICPU: ProcessorId=0..15 ... Enabled
-IOAPIC: Version 0x21 Vectors 64:87
-ACPI: Executed 29 blocks of module-level executable AML code
-ACPI: sleep states S4 S5
-RTC: Only single RAM bank (128 bytes)                       ← 最后一行
-```
-
-1401 的 `bootfix` 诊断器把它判为 "AMD hand-off 情形"并逐档改配置：
-
-| 档位 | 规则 | 改动 | 实际结果 |
-|---|---|---|---|
-| 第一档 | `bootlog-amd-exitbs` | `RebuildAppleMemoryMap=False`、`EnableWriteUnprotector=True`、`SyncRuntimePermissions=False` | ❌ 仍停（第 4 次引导） |
-| 第二档 | `bootlog-handoff-devirt` | 保留上组，`DevirtualiseMmio=False` | ⬜ **从未引导过 → 已在第一轮主动撤下** |
-
-> **勘误**：这一档的触发前提是"内核从未打印"（`bootfix.py` 第 156–158 行注释：
-> *"the screen freezes on EXITBS:START, the kernel never prints"*）。
-> 但屏幕照片证明**内核已经跑起来了** —— 上面那些行全是 ExitBootServices **之后**的输出。
-> **所以第一档放弃 Dortania MAT 组合的理由对这台机器不成立。**
-> 详见 [受控实验记录](docs/05-受控实验记录.md) 的 D3。
-
-### 4. 第一轮：把实测条件弄干净 —— ✅ 已成功
-
-`npci` 从未生效，意味着此前所有"某改动有效/无效"的结论都不可靠。所以第一轮**只做一件事**：
-把 `boot-args` 加入 `NVRAM → Delete`，让那个写了很久的 `npci=0x2000` **第一次真正进入内核**，
-同时把未实测的第二档撤回实测基线。相对基线的 diff **只有 1 行**。
-
-**结果**（`logs/opencore-2026-10-13-011110.txt`）：
-
-```
-00:231  OC: Deleting NVRAM 7C436110-…:boot-args - Success      ← 冻结值被清掉
-00:280  OCVAR: Setting NVRAM 7C436110-…:boot-args - Success    ← 新值写入
-15:255  AAPL: #[EB|MBA:OUT] <"… ipc_control_port_options=0 npci=0x2000 slide=159">
-```
-
-同时 `OCABC:` 确认本轮真正生效的内存映射参数就是实测基线
-（`DEVMMIO 1 / VMAP 1 / WRUNPROT 1 / RBMAP 0 / RTPERMS 0`），
-`OC: Prelinked status - Success`，且仓库配置经脱敏后与卡上**逐字节相同**。
-
-### 5. 第二轮（已写入卡上，待引导验证）：隔离 AMD I2C（AMDI0010）控制器
-
-屏幕最后一行停在 `VoodooI2C…Controller::AMDI0010 Starting I2C controller`。
-经 DSDT 反编译确认，**触摸板正是挂在 `\_SB.I2CA`（`_HID = AMDI0010`）上**，
-所以这不是无关旁支，而是触摸板所在控制器。
-
-单变量改动：禁用 4 个 VoodooI2C 家族条目（`VoodooI2C` / `VoodooGPIO` /
-`VoodooI2CServices` / `VoodooI2CHID`），diff **只有 4 行 `true` → `false`**；
-`VoodooInput` 保留启用（它与 I2C bundle 无加载依赖，且 `VoodooPS2Trackpad` 运行时需要它），
-`VoodooPS2Controller` 一族全部保留。详见
-[受控实验记录](docs/05-受控实验记录.md) 第 4 节（含依赖闭包证明与判定标准）。
-
-**写入结果**：`08781B25C755B1B5…`（52137 B，`ocvalidate` 0 issues，SMBIOS 原样保留，
-其余段落逐字节未变）。回滚：`D:\_backup-round0\config.plist.round1`。
-
-**实测结果**（`logs/opencore-2026-10-13-020808.txt`）：六项**全部符合预期** ——
-`MBA:OUT` 仍含 `npci=0x2000`；`OCABC` 与 Round 1 逐字相同；`Prelinked status - Success`；
-四个 VoodooI2C kext **各 0 条注入**；独立 `VoodooInput` 成功注入（且只有一份）；
-无 panic 文件、无新错误。截图停在 `PCI configuration begin`，但**无停留时长**，见 §6。
-
-### 6. 第三轮（已写入卡上，待引导验证）：只移除 `npci=0x2000`
-
-**为什么它是干净的单一变量**：Apple 自己的 `IOPCIFamily` 源码里 `npci=` 是 `pci=` 的**取反**
-（`gIOPCIFlags &= ~debug`），而 `kIOPCIConfiguratorPFM64 = 0x2000` **默认是置位的** ——
-所以 `npci=0x2000` 等于**清除 PFM64 标志**。
-
-该标志在源码里只被**引用 5 次、其中仅 3 处是行为测试**，且全部是把 `maxAddress` 设为全 1
-（即"允许 64 位 BAR 与 prefetchable 区间落在 64 位地址空间的任意位置"）。
-**合成窗口那段并不检查该标志**（只看 `hasHostMemory && !hasHost64 && !fAddedHost64`，
-尺寸由 `fPFM64Size` / `pci64=` 决定）—— 所以**不能说** `npci=0x2000` "关闭了 64 位 MMIO"。
-
-本机的实测事实是：**Above 4G Decoding 已启用**（GPU 的 BAR 被固件放在 `0x7E00000000` ≈ 504 GiB，
-不是靠 BAR1 大小推的）、**BAR1 = 8 GiB ReBAR**（已超出 macOS 1 GB 的理论上限，靠
-`ResizeAppleGpuBars=0` 缩到 64 MB）。这类设备的 64 位 BAR 恰好依赖上面那条许可，所以本轮要检验的
-**推论**是"清除 PFM64 收回了本机需要的 64 位安置余量"。**这只是推论，不是已知结论。**
-
-同时 `docs/03` 那句"加 npci 就越过了 `PCI configuration begin`"**已被证伪**：
-第 2、3 次引导是在 `MBA:OUT` 里**根本没有 npci** 的情况下越过该阶段的。
-
-**改动：相对 Round 2 只有 1 行**（删掉 `boot-args` 末尾的 ` npci=0x2000`），
-`Booter.Quirks` / AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 全部逐字节不变，
-`NVRAM → Delete` 里**继续保留 `boot-args`**。
-
-**写入结果**：`4642CD80748AF3A6…`（52125 B，`ocvalidate` 1.0.9 → 0 issues，SMBIOS 原样保留，
-其余段落逐字节未变；33 项自检全 PASS）。回滚：`D:\_backup-round0\config.plist.round2`。
-
-> **不**替换成 `npci=0x3000`，**不**改 BIOS，**不**动 IOMMU，**不**自动切 MAT。
-> 若本轮仍卡住，**只能**记为"移除 npci 不足以解决当前问题"—— **不能**据此排除 npci 本身的影响，
-> **也不能**因此锁定 ACPI/MAT。详见 [受控实验记录](docs/05-受控实验记录.md) §6。
-
-**屏幕现象（用户报告并已确认停留时长）**：最后一行是 `RTC: Only single RAM bank (128 bytes)`，
-在此处**连续 ≥10 分钟无新输出、未进入 Recovery**。
-
-> **正式结论：实验配置生效，但未能成功启动。**
-> **⚠️ 两条不许越界的推论**：(1) 该行**不是**已确认死因 —— 它是 AppleRTC 的信息性输出，
-> 且"最后一行"在四轮之间来回移动（修复前是这条、round1 是 VoodooI2C `start()`、
-> round2 是 `PCI configuration begin`），本轮没有任何指向 RTC 子系统的独立证据；
-> (2) 本轮只证明"**移除 npci 不足以解决问题**"，**不能**说明 npci 原本没有影响，
-> 也**不能**据此锁定 ACPI / MAT / IOMMU。
-> 另：`OC: Panic log does not exist` 出现在 `01:129`（boot.efi 启动**之前**），
-> **不能**用来证明内核没有故障。
-
-> **勘误（第四轮引导后补充）**：本节"停在 `RTC:`"这一读法**已被证伪**。Round 2 的照片证明
-> **同一次启动**里 `RTC: Only single RAM bank (128 bytes)` 之后还有大量输出
-> （`AppleCredentialManager` / `AppleKeyStore` / `CoreAnalyticsHub` / `AppleVTD` … 一直到
-> `PCI configuration begin`）；Round 4 在**同样没有 `npci`** 的条件下也越过了 `RTC:`。
-> 所以 `RTC:` 这一行**不是**独立卡点，本轮的停点是 `IOPCIConfigurator::configure()`。
-> 详见 [受控实验记录](docs/05-受控实验记录.md) §7.11 与
-> [只读分析](docs/06-只读分析与Round5候选.md) §1.3 / §1.4。
-
-### 7. 第四轮：MAT 内存映射三元组（已写入并已实测）
-
-| Quirk | round3（改前） | round4（**卡上现状**） |
-|---|---|---|
-| `EnableWriteUnprotector` | `True` | **`False`** |
-| `RebuildAppleMemoryMap` | `False` | **`True`** |
-| `SyncRuntimePermissions` | `False` | **`True`** |
-
-其余全部不变（`DevirtualiseMmio=True`、`SetupVirtualMap=True`、I2C 仍禁用、无 `npci`、
-AMD 补丁 / ACPI / SMBIOS / BAR / DeviceProperties 逐字节相同）。
-
-**为什么适合 FA401UU**：Dortania 的条件原文是 *"If your firmware supports MATs (2018+ firmwares)"*，
-并让你用日志确认 —— 本机**每轮引导都打印 `OCABC: MAT support is 1`**，条件满足；
-而 OpenCore 文档写明 `RebuildAppleMemoryMap` 是**取代** `EnableWriteUnprotector` 的那一个，
-所以卡上现状用的正是 Dortania 给**不支持 MAT 的旧固件**的组合。
-
-**必须同时知道的反面证据**：第 2、3 次引导**已经跑过这组组合**并同样停住 ——
-但那两次 `npci` **未被应用**、I2C 家族**仍启用**。所以本轮是它**第一次**在干净条件下运行。
-
-精确 diff（**3 行**，1-based 行号 181 / 199 / 207）、判定标准、回滚与 Round 5 方向见
-[受控实验记录](docs/05-受控实验记录.md) §7。
-
-**写入结果**：`021F02B3B4695302…`（52124 B，`ocvalidate` 1.0.9 → 0 issues，SMBIOS 原样保留，
-`Booter.Quirks` 里**恰好只有这 3 个键**变化，其余段落逐字节未变；42 项自检全 PASS）。
-回滚：`D:\_backup-round0\config.plist.round3`。
-
-**实测结果**（`logs/opencore-2026-10-13-095517.txt`）：日志侧 **7 项全部符合预期** ——
-`WRUNPROT 0 / RBMAP 1 / VMAP 1 / RTPERMS 1 / DEVMMIO 1 / MAT support is 1`
-（日志 `12:484 OC: Prelinked status - Success`，21 条 kext 注入全部 `- Success`）、
-`MBA:OUT` 无 `npci`、四个 VoodooI2C 条目仍不注入。
-
-> ### Round 4 正式结论（已定稿）
->
-> **配置生效，内核启动未成功，已确认 ≥10 分钟无新屏幕输出。**
->
-> 实机操作者确认：在下面两行连续停留 **>10 分钟**，屏幕无新输出，**未进入 macOS Recovery**：
-> ```text
-> [ PCI configuration begin ]
-> [IOPCIConfigurator::configure()] PCI configuration PCI0
-> ```
-> 同一次启动在此之前已出现 `RTC:`、`AppleCredentialManager`、`AppleKeyStore`、`AppleSSE`、
-> `CoreAnalyticsHub`。（照片文件仍未提供，故屏幕内容记为**操作者确认陈述**；**时长已确认**。）
-
-> **两条必须同时成立的限制**
->
-> 1. **屏幕停点是"结构性"的**：`IOPCIConfigurator.cpp` 在 `:3342` 调
->    `setConsoleInfo(0, kPEDisableScreen)` **之后**才执行 `doConfigure()`，而
->    `[ PCI configuration end ]` 在屏幕重新开启**之后**才打印。所以严格可得的结论只有
->    **"≥10 分钟没出现 `PCI configuration end` ⇒ `configure()` 没走到 `:3388`"** ——
->    这**不等于**证明内部死锁，也**不能**指出停在哪台 PCI 设备。
-> 2. **控制台会滚动，屏幕上只有最后约 40 行**（Round 2 照片顶端可见行已是
->    `ACPI: sleep states S4 S5`）⇒ 停在 PCI 的那类引导里，**早期的 ACPI 失败计数读不到**。
-
-> **本轮最重要的新事实**：Round 2（`MBA:OUT` 里**有** `npci=0x2000`，`WRUNPROT 1/RBMAP 0/RTPERMS 0`）
-> 与 Round 4（**无** `npci`，`0/1/1`）**最后可见行完全相同**。
-> ⇒ 在这个停点上，`npci=0x2000` 与这组 MAT 组合**都不足以**让系统进入 Recovery；
-> 但**不能**因此说它们"对内核行为无影响"（两轮**内部**停点是否相同**无法证明**）。
-> 详见 [受控实验记录](docs/05-受控实验记录.md) §7.10 / §7.11。
-
-> **Round 3 的观测保留**：实机操作者确认 Round 3 曾在
-> `RTC: Only single RAM bank (128 bytes)` 处停留 ≥10 分钟无新输出。
-> 该事实**不改写**；Round 4 在同样没有 `npci` 的情况下出现了后续 PCI 日志，
-> ⇒ **不同轮次执行结果存在差异，目前无法解释**（只能说 `RTC:` 不一定是稳定复现的独立根因）。
-
-**⛔ 执行后即停止** —— 未获批准**不执行 Round 5**，**不**修改 MMIO 白名单、ACPI、IOMMU、
-`npci`、BAR 或其它 kext。
-
-**Round 5B 已获批并写入卡上（待引导验证）** —— 详见 [docs/05](docs/05-受控实验记录.md) §7.12 与
-[docs/06](docs/06-只读分析与Round5候选.md) §4.6：
-
-* **唯一改动**：`Booter → Quirks → DevirtualiseMmio`：`true` → **`false`**（**只此 1 行**，
-  1-based 行号 **171**）。
-* 卡上 `021F02B3…`（52124 B）→ **`34605D9D…`（52125 B）**，读回哈希与批准前给出的预测值**完全一致**。
-* `ocvalidate` 1.0.9 DEBUG（对卡上文件）→ **No issues found**。
-* 备份：`D:\_backup-round0\config.plist.round4`；回滚一步命令见 `docs/05` §7.12。
-* 未使用 GitHub 脱敏候选覆盖真实 EFI —— **SMBIOS 与备份逐字节相同**。
-
-**已引导，结果见 [docs/05](docs/05-受控实验记录.md) §7.13**（两次引导，
-`logs/opencore-2026-10-13-143611.txt` 与 `…-143926.txt`）：
-
-| 检查项 | 结果 |
+| | |
 |---|---|
-| `DEVMMIO=0` | ✅ |
-| 5 条 `OCABC: MMIO devirt …` 不再出现 | ✅ **0 次** |
-| 是否提前出现内存映射错误 | ❌ **没有**（无 `EB.MM.AKM`/`STOP 0x16`/`No slide values are usable`；`Valid slides - 81-255` 与 Round 4 逐字相同） |
-| 是否重新到达 `PCI configuration` | ❌ **没有** |
-| 是否出现 `PCI configuration end` / 进入 Recovery | ❌ **都没有** |
+| 机型 | ASUS TUF Gaming A14 **FA401UU**，BIOS `FA401UU.311`，UEFI |
+| CPU | **AMD Ryzen 7 8845H**（Zen 4 / Hawk Point，8C/16T） |
+| 独显 | **NVIDIA RTX 4050 Laptop**（`10DE:28E1`，AD107）← 内屏直连这颗 |
+| 核显 | Intel 无关；AMD Radeon 780M（`1002:1900`）在 macOS 无驱动 → `disable-gpu` 屏蔽 |
+| 已装系统 | **macOS 15.7.7 / 24G720**（Sequoia） |
+| 引导 | OpenCore（DEBUG 构建，来自 [1401](https://github.com/nullmoth/1401) v2.3.6），装在内置 ESP |
+| SMBIOS | `MacBookPro16,2`（**仓库里已抹除身份字段，见下方警告**） |
+| 无线 | MediaTek **MT7922 / RZ616**（`14c3:0616`）→ 实验驱动，见 [Wi-Fi](#wi-fi实验驱动能连但不稳) |
+| 蓝牙 | MT7922 的 USB 侧（`0489:e0f6`） |
+| 声卡 | Realtek ALC256（AppleALC `layout-id 97`） |
 
-> **屏幕侧（仅第 1 次引导有照片 `IMG20261013143753.jpg`）**：屏幕停在 boot.efi 的
-> `#[EB|LOG:EXITBS:START]`，**其下没有任何 macOS 内核输出**（OpenCore 选择菜单仍留在顶部）
-> ⇒ **内核零输出**。参照：Round 2 在引导后约 90 秒时屏幕已滚过约 40 行内核输出。
-> ⇒ **失败点前移**：Round 4 到过 `PCI configuration begin`，本轮内核一行未打印。
->
-> **推论限制（按批准时的判据修正）**：这**只**说明 `DevirtualiseMmio=false`
-> **影响了内存映射或启动兼容性**。**不能**推断"固件运行期访问了某块 MMIO"，
-> **不能**据此确定任何 `MmioWhitelist` 地址。且**未出现** `EB.MM.AKM`/`STOP 0x16`
-> ⇒ **不是** issue #9 那类 boot.efi 阶段失败；失败点落在 `EXITBS:START` 之后、
-> 内核首次打印之前，**日志无法定位**。
->
-> **观测完整性（结案后）**：**首轮已确认** —— 实机操作者确认照片最后显示
-> `[EB|LOG:EXITBS:START]`，其后**连续等待 >10 分钟**无新屏幕输出，未进入 Recovery。
-> **次轮（14:39）只有 OpenCore 日志、没有照片** ⇒ **不得**写成"次轮也确认等待了 10 分钟"，
-> 只能记为"次轮 OpenCore 阶段与首轮逐行同型，屏幕状态未验证"。
-
-### Round 5B 正式结案 + 已回滚到 Round 4
-
-> **Round 5B 定稿：配置生效、实机未能成功启动、首轮已确认 ≥10 分钟无新屏幕输出。**
-
-记录（实机）：**禁用 `DevirtualiseMmio` 后，最后可见输出相比 Round 4 明显前移**
-（Round 4 到过 `[ PCI configuration begin ]`；Round 5B 内核一行未打印），
-**但不能确认具体故障指令或 MMIO 地址**。
-
-| 回滚步骤 | 结果 |
-|---|---|
-| 回滚前卡上 SHA-256 | ✅ `34605D9D…`（== 批准基线） |
-| 备份有效性 | ✅ `D:\_backup-round0\config.plist.round4` == `021F02B3…` |
-| 执行 | `Copy-Item D:\_backup-round0\config.plist.round4 D:\EFI\OC\config.plist -Force` |
-| **回滚后 SHA-256** | ✅ **`021F02B3B46953021FF31835518790DD6BEB57074BE822D127305434581815E4`**（52124 B） |
-| `ocvalidate` 1.0.9 DEBUG（卡上） | ✅ **No issues found**（exit 0） |
-
-**卡上现状 = Round 4**（`021F02B3…`）。本轮未批准任何其它 EFI 修改。
-上游案例复核与 Round 6 候选见 **[docs/07-上游案例复核与Round6候选.md](docs/07-上游案例复核与Round6候选.md)**。
-
-### Round 6 候选（**只准备，未写入 U 盘**）
-
-**单变量**：`NVRAM → Add → 7C436110-…:boot-args` 末尾追加 ` npci=0x3000`（**仅此 1 行**，
-1-based 行号 **1920**；52124 → **52136** B；卡上预测 SHA-256 **`43ABBAD5…`**）。
-候选文件 [`efi/candidates/round6-npci-0x3000.plist`](efi/candidates/round6-npci-0x3000.plist)
-（`ocvalidate` → No issues found）。其余全部不动：`DevirtualiseMmio=True`、`SetupVirtualMap=True`、
-MAT 三元组、`ResizeAppleGpuBars=0`、`UEFI.ResizeGpuBars=-1`、四个 VoodooI2C 仍禁用、
-`MmioWhitelist=[]`、ACPI 7 条、`Kernel.Patch` 27 条、SMBIOS。详见 docs/07 §8 / §10。
-
-> **为什么是它**：Round 5B 已把"内存图"这一轴指向**变差**方向，所以下一步不该在同一轴继续试错，
-> 而应当**用最低成本把唯一还没走完的 boot-arg 轴（`npci`）走完** ——
-> 目前只有 `npci=0x2000` 在**本停点**被测过；Dortania 与 1401 的 `bootfix.py` 都会在它失败后
-> 再试 `0x3000`。测完就能把结论从"`0x2000` 不足"升级为
-> "**整条 `npci` 阶梯都不足以进入 Recovery**"，从而把怀疑范围**干净地**压到
-> `configure()` 内部的资源/BAR 分配上。
-> **不预设它比 `npci=0x2000` 更有效。** 就这两个 boot-arg 而言，`0x3000` 相对 `0x2000`
-> 只多清一位 `kIOPCIConfiguratorTBMSIEnable`（只作用于 Thunderbolt 隧穿 MSI 路径，
-> IOPCIFamily-681.140.3 `IOPCIBridge.cpp:5723`），与本机卡点先验关联度低；它的价值是**消除性**的。
->
-> **⚠️ 判据修正（批准 Round 6 时要求）**
-> 1. **不得把 Round 6 描述成"只测试 `TBMSIEnable`"。** 基线是 **Round 4（无 `npci`）**，
->    所以 `npci=0x3000` **同时清掉 `PFM64` 与 `TBMSIEnable` 两位**。
->    而且 Round 2 虽然用过 `npci=0x2000`，但**那轮 MAT 三元组不同**（`1/0/0` vs `0/1/1`）
->    ⇒ **不能**把 Round 2 与 Round 6 当作"只差一位"的严格对照。
->    * **若 Round 6 成功**：只能说明这两位（或其中之一）有效；**要定位到哪一位，必须在同一基线上再做单一位实验**。
->    * **若 Round 6 失败**：只能记为"**`npci=0x3000` 在本配置下不足以解决启动问题**"，
->      **不能**完全排除 PCI 参数的影响。
-> 2. **风险是"较低、可回滚"，不是"零风险"。** 修改 PCI 标志**仍可能造成更早的引导失败或显示异常**，
->    **不得预设最坏结果只是"无变化"**。
-
-> **🔥 Round 6 已引导并正式结案 —— 配置生效，内核启动未成功，≥10 分钟无新输出。**
-> 日志 [`logs/opencore-2026-10-13-170428.txt`](logs/opencore-2026-10-13-170428.txt)：
-> ✅ `MBA:OUT` 含 `npci=0x3000`；✅ `OC: Prelinked status - Success`；
-> ✅ MAT 三元组 / `DEVMMIO=1` / 7 条 `MMIO devirt` / 四个 VoodooI2C 仍禁用 / RBAR 段
-> 与 Round 4 **逐字相同**；✅ 无 `EB.MM.AKM` / `STOP 0x16` / `No slide values`。
->
-> **关键新证据**：与 Round 4 逐行比对（行数都是 **746**，差异 17 行），唯一带机制意义的差异是
-> `OC: Not deleting NVRAM … matches add` + `OCVAR: … - ignored, exists`（R4）
-> → **`OC: Deleting NVRAM … - Success` + `OCVAR: Setting NVRAM … - Success`**（R6）
-> ⇒ **`npci=0x3000` 确实被写进 NVRAM 并进入有效命令行**。
->
-> **屏幕侧（操作者补充照片，已独立复核）**：`IMG20261013170545.jpg` 最后两行确认是
-> `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`，
-> 上方是 5× `[addMemoryRange()] AppleVTD …` 与 `CoreAnalyticsHub start completed`
-> —— **与 Round 4 的屏幕内容逐行一致**；操作者确认在该画面**连续等待 >10 分钟无新输出、未进入 Recovery**。
->
-> **⚠️ 措辞约束**：**不得**把最后可见的两行 PCI 日志等同于"已定位的死锁指令"。
-> 严格可得的只有：**≥10 分钟没出现 `[ PCI configuration end, … ]` ⇒ `configure()` 没走到 `:3388`**；
-> 这不能证明内部死锁（也可能极慢/无限循环），也不能指出停在哪台 PCI 设备
-> —— 因为 `:3342` 在 `doConfigure()` 期间**主动关闭 PE 屏幕**。
-> 详见 [docs/05](docs/05-受控实验记录.md) §7.17 / §7.18。
-
-> **✅ 已按批准回滚到 Round 4**：卡上 `43ABBAD5…` → **`021F02B3B46953021FF31835518790DD6BEB57074BE822D127305434581815E4`**（52124 B），
-> `ocvalidate` → **No issues found**。回滚路径保留：
-> `D:\_backup-round0\config.plist.round4-restored` 与 `…\config.plist.round4`。
-> **npci 轴到此停止**：`0x2000`（Round 2）与 `0x3000`（Round 6）都**不足以进入 Recovery**。
-
-> **RTX 4050 BAR 专项 + PCI 资源审计见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md)。**
-> 三条硬结果：
-> ① **8 GiB 的 BAR1 在 `0x7C00000000`，不在 `0x7E00000000`**（后者只有 32 MiB 的 BAR3）
-> —— 此前"8 GiB BAR 恰好顶到 DSDT 64 位窗口上限"的推论**前提被推翻**；
-> ② **`nvidia-smi -q -d MEMORY` 是本机可用、快速、只读的 BAR1 读数仪**，本轮实测
-> **BAR1 Total = 8192 MiB**，与 `plan.json` 的 `bar1_bytes = 8589934592` 一致
-> （也证明 1401 扫描里的 `"Resizable BAR": "Disabled"` 是**错误读数**）。
-> **⚠️ 证据等级限定**：它反映的**只是 Windows 那条路径**（当时 `ResizeGpuBars=-1`，OpenCore 什么都没做），
-> **不能**用来证明 **Apple 启动路径**的缩容结果 —— 那是**另一个调用点**（下条）。
-> ③ **`New BAR == Old BAR` 只能说明地址寄存器相同，不能证明 BAR size 没变** ——
-> OpenCore 从不读回写后的 Control 寄存器，所以"显卡是否真的采用了 64 MiB BAR"**目前仍是 UNKNOWN**。
->
-> **🔥 Round 7（已写入卡上，待实机启动）—— 两阶段日志对照**
-> ① 本机 OpenCore 的**确切源码已定位**：卡上 `OpenCore.efi` = Dortania build-repo 的
-> **`OpenCorePkg-963025f`**（`1401/.../mirror.json:397` 的 pin）—— 上游 **没有 `1.0.9` tag**，
-> 必须按 **commit `963025f`** 取源码。
-> ② 两个调用点**已在 `963025f` 逐字确认**：
-> **阶段 A** `Library/OcMainLib/OpenCoreUefi.c:982-987`（函数 `OcLoadUefiSupport`，**选择界面之前**）
-> → `DEBUG("OC: Setting GPU BARs to %d")` + `ResizeGpuBars(…, TRUE, …)`；
-> **阶段 B** `Library/OcAfterBootCompatLib/ServiceOverrides.c:1255-1259`
-> → `ResizeGpuBars(ResizeAppleGpuBars, FALSE, …)` —— **该处源码没有 `OC: Setting GPU BARs` 这行**。
-> ③ 六项严格区分：目标 size **已算出**；Control 写入**已发送但返回状态未被捕获**
-> （`:323` 裸调用，无 `Status =`；`SetResizableBarOnDevicePciIo` 末尾**无条件 `return EFI_SUCCESS`**）；
-> **写后 BarSize 从不读回**；Apple 阶段读回是本轮要造的观测；macOS 内核实际拿到的资源**不可观测**。
-> ⇒ **`Reprogrammed BARs to original - Success` 只证明"地址写回"那次 `Pci.Write` 成功。**
->
-> **唯一改动**：`UEFI → Quirks → ResizeGpuBars`：`-1` → **`0`**（**1 行**，1-based 2285；
-> `021F02B3…`（52124 B）→ **`58E78A12C8102AF7A5DD3B2D7417BE891B17EFC78FF0817C99F69C6BC7A78CA3`**（52123 B）；
-> `ocvalidate` 1.0.9 → **No issues found**；`ResizeAppleGpuBars=0`、`ResizeUsePciRbIo=false`、
-> MAT/`DevirtualiseMmio`/`SetupVirtualMap`/`MmioWhitelist`/`boot-args`/SMBIOS **全部未动**）。
-> **独立可回退副本**：整棵 `D:\EFI` → `C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI`。
-> **⚠️ 有风险、不是零风险**：阶段 A 在**选择界面绘制之前**执行 ⇒ 可能破坏 GOP framebuffer，
-> **导致难以/无法选中目标系统**（与 issue #23 一致）；对固件/Windows/内置盘**无持久影响**。
-> ```powershell
-> Copy-Item D:\_backup-round0\config.plist.round4-pre-r7 D:\EFI\OC\config.plist -Force      # A 配置回滚
-> robocopy C:\Users\24269\Documents\macos\efi-snapshots\round4-r7-baseline\EFI D:\EFI /MIR   # B 整棵 EFI
-> ```
-> 若选择器损坏/黑屏：**优先用固件启动菜单直接进 Windows**，不盲目按键、不叠加修改，记为「实验无法完成」。
->
-> **✅ Round 7 已引导并判读完毕**（日志 [`logs/opencore-2026-10-13-213656.txt`](logs/opencore-2026-10-13-213656.txt)）：
-> **两组 RBAR 输出都出现了，位置与预测逐字命中** ——
-> 阶段 A：`00:283 OC: Setting GPU BARs to 0`（紧跟 `00:280 OC: AVX enabled - 1` 之后）、
-> `Setting RBAR to 0 **inc 1** on 5/43`、`RBAR 2/3 … sizing 0 **inc 1** … **from 13 to 6**`、`New BAR …`、`Reprogrammed … - Success`；
-> 阶段 B：`14:884 RBAR using PciIo`（第二次，**无** `Setting GPU BARs`，与源码一致）、
-> `Setting RBAR to 0 **inc 0** on 5/43`、**`RBAR 2/3 … sizing 0 inc 0 … from 6 to 6`**。
-> 两组的能力掩码组（`0x10`/`0x3FC0`/`0x20`）、`Old BAR` 六 dword、`RBAR control is 460, total 3`
-> **逐字相同** ⇒ **确认同属 `01:00.0` 的 RTX 4050**。
->
-> **结论**：① **阶段 B 一次写都没做**（`New BAR` 计数 **0**、`Reprogrammed` **0** ⇒ `from 6 to 6` 是**零写入的纯读回**）；
-> ② ⇒ **OpenCore 的 RBAR Control 写入确实生效**，`docs/08` §3.3 的二义性解决：
-> **"GPU 忽略/锁住写入"被证伪**，`New BAR == Old BAR` 的真实原因是**设备保留了 BAR 内容**；
-> ③ **跨轮次（证据等级已下调）**：R4/R6 虽无阶段 A，但**阶段 B 确实发出了写入**
-> （`New BAR`+`Reprogrammed` 为证）⇒ **"BAR1 在交给 XNU 之前已是 64 MiB"证据很强**；
-> **但那些轮次没有各自的写后读回** ⇒ **不能**声称"当时 XNU 一定用了 64 MiB BAR1"，
-> 更不能把「Apple 交接阶段的尺寸」等同于「XNU PCI 枚举阶段的最终尺寸」
-> ⇒ **BAR 轴嫌疑下降，但未被排除**；
-> ④ **屏幕仍停在** `[ PCI configuration begin ]` + `[IOPCIConfigurator::configure()] PCI configuration PCI0`。
-> **实机操作者已确认：在该停点后连续等待 >10 分钟，没有任何新的屏幕输出，也没有进入 Recovery。**
-> ⑤ **GOP 风险本次未触发**（引导正常到达 Apple 路径并跑到 `EXITBS`）—— 只说明"本次未触发"，**不等于无风险**。
->
-> **✅ Round 7 正式结案**：**「BAR 双阶段读回成功，macOS Recovery 启动失败，已确认 ≥10 分钟无新输出。」**
-> 两阶段证据（`13→6`、`6→6`）与 **XNU 最终 PCI 资源仍不可观测**这一限制均保留。
-> **⛔ 原"Round 8 候选 B（只改 `ResizeAppleGpuBars: 0 → -1`）"已判定为设计无效** ——
-> Round 7 已把 `UEFI.ResizeGpuBars` 设为 `0`，阶段 A 会先在 UEFI 早期缩容，
-> 只改 Booter 项**不会**把 BAR1 恢复成 8 GiB。若将来要测 8 GiB，必须以 **Round 4 为基线**
-> （`UEFI.ResizeGpuBars=-1` **且** `Booter.ResizeAppleGpuBars=-1`，只差 Booter 一项）——
-> 但该实验已**按指示降级**。
->
-> **✅ Round 8 已执行（纯只读，零 EFI 改动）** —— Windows 侧 PCI 拓扑与资源采集，
-> 完整结果见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §11、脚本与脱敏输出见 [`audit/`](audit/README.md)：
-> * **最重要的一条（方法论）**：`pnputil /resources` **会静默丢掉所有 ≥4 GiB 的窗口**
->   （`CmResourceTypeMemoryLarge`）。本机恰好是这些大窗口最要紧 ——
->   被丢掉的 3 条正是 **dGPU BAR1（8 GiB）**、**GPP0 的 8 GiB+32 MiB 窗口**、**GP11 的 64 GiB 窗口**。
->   ⇒ 单独用 `pnputil` 做"无重叠"结论**不成立**；必须与 CfgMgr32 的
->   `ALLOC_LOG_CONF` 记录（`1401/plan.json`）**合并**后再判。
-> * **拓扑**：42 个 PCI 功能、**8 座 PCI-to-PCI 桥**，每座都拿到了 **PCI 路径 + ACPI 路径**；
->   `DEVPKEY_Device_DeviceNumber/FunctionNumber` **在本机不存在**，改用
->   `BusNumber`/`Address`/`LocationPaths`/`LocationInfo` **四源交叉核对 BDF，不一致 = 0**。
-> * **预登记判据全部落在 (β)**：合并窗口集上，子窗口不被父桥包含 **0 例**、
->   越出 ACPI 声明窗口 **0 例**、**部分重叠 0**、总线最大 `0x67`（**超 `0xFF` 的 0 个**）。
-> * **登记缺口（不猜）**：桥的 `Primary/Secondary/Subordinate` 与
->   `Memory/Prefetchable Base·Limit` **寄存器**在 Windows 用户态**取不到**
->   （`CM_Get_First_Res_Des` 本机 DLL 未导出；传 `NULL` 返回 `CR_INVALID_FLAG(4)`），
->   只能**派生**次级总线号，且无子设备的桥 = **未知**。
-> * **GP11（`00:03.1`，`1022:14EF`）已重新识别 —— 不是异常**：本机固件自己证明它是
->   **AMD USB4 / Thunderbolt 的 PCIe 隧道根端口**（`ssdt17_INTGPP03.dsl:3110-3133`：
->   `Scope(\_SB.PCI0.GP11)` 的 `_DEP` 返回 `Package{ \_SB.PCI0.GP19.NHI0 }`，
->   而 `NHI0` 就是 USB4 主机接口；该 `_DEP` 正是 `ssdt13_CPMMSOSC.dsl:244-258` 里
->   受 BIOS 开关 `\DDEP` 控制的"USB4 ACPI _DEP"；另加 `_PRW` 唤醒 GPE、
->   GPP PME 的 `Notify(GP11, 0x02)`、以及与 `NHI0/NHI1` 同处一张端口电源表）。
->   ⇒ 它那 **384 MiB + 64 GiB** 的预留是**固件自己要求并分配的隧道孔径**，**不是过度分配**。
-> * **注册表是第三个 Windows 只读来源**：`Enum\PCI\<dev>\<inst>\LogConf` 的
->   `BootConfig`（`CM_RESOURCE_LIST`，**固件交接**）与 `BasicConfigVector`
->   （`IO_RESOURCE_REQUIREMENTS_LIST`，**需求孔径**）被完整解码，逐字节自洽。
->   其中核对出一条关键规则：**Type 7 `MemoryLarge` 的长度字段 = length ÷ 256**
->   （证据：RTX 4050 的 BAR1 = 8 GiB = `0x200000000` 有 33 位，若为 32 位字节字段会回绕成 0，
->   实测为 `0x2000000`；而同一设备 Type 3 的 BAR3 同样读作 `0x2000000` 却真的是 32 MiB）。
->   **GP11 的 64 GiB 孔径由此得到第三个独立确认。**
-> * **CfgMgr32 的归因已更正**：`CM_Get_First_Log_Conf(BASIC/ALLOC/BOOT)` 在本机全部成功，
->   但 `CM_Get_Next_Res_Des`（含文档所载"把 LOG_CONF 句柄当 `rdResDes`"的形式、`ForType` 扫遍
->   `0x00–0x41`、32 位与指针宽度两种句柄声明）**一次都没返回 `CR_SUCCESS`**。
->   这**不再**归因于"缺少 `CM_Get_First_Res_Des`"——该能力并未缺失：
->   同一批描述符数据已从注册表完整读出并解码。**桥的总线号是 Windows 根本不记录的值**
->   （25 个有 `LogConf` 的设备里 **0 个**含 `CmResourceTypeBusNumber` 描述符）。
-> * 🆕 **仍属预测的一条**：`GP11` 是否预留 `secondary=0x05 / subordinate=0x64`
->   （实测在用总线为 `0x00–0x04` 与 `0x65–0x67`，空洞 `0x05–0x64` **恰为 96 条**，
->   而下一座桥正好拿到 `0x65 = 5 + 96`）。**这是预测，不是实测**；只有 Linux 配置空间能实测。
-> * 对早期 "`0x00–0x100` 总线范围" 与四条"排除性结论"的**过度推断已逐条勘误**（docs/08 §10.5、§11.5）。
->
-> **下一轮（未批准写盘）**：**为"资源冲突/桥枚举"去用 Linux 已无必要** ——
-> Windows 侧已查完（含用注册表第三来源独立复核全部桥窗口），且 GP11 已由固件识别为 USB4 隧道端口。
-> Linux Live 的唯一剩余价值是**把 GP11 的总线号预测变成实测**（以及顺便取寄存器原值做基线），
-> 属**可选、低优先级**：见 [Linux Live 只读采集预案](docs/09-Linux-Live只读采集方案.md)
-> 与 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §12.5。
-> 若执行：从**固件启动菜单**直接引导，**不经过 OpenCore**；用 `lspci -Dnnvv` 与
-> `lspci -x -s <bdf>`（**前 64 字节足够**，不用 `-xxx/-xxxx`）；
-> 禁止 `setpci` 写、复位、解绑，以及 `pci=realloc`/`pci=nocrs`/`pci=assign-busses`/`pci=noearly`
-> 这类改变 PCI 初始化行为的参数。
-> 详见 [docs/08](docs/08-RTX4050-BAR与PCI资源审计.md) §9.6 / §10 / §11 / §12 与
-> [docs/05](docs/05-受控实验记录.md) §7.20。
->
-> ⛔ **Round 9 原候选已撤销**（2026-10-17 审核）：`pci-workloop-timeout-ms` **不能**把静默卡死变成可判读事件 ——
-> ① `setMaximumLockTime(…, 0)` 不含 `kTimeLockPanics`，最多 `OSReportWithBacktrace()`，**不是 panic**；
-> ② `lockTime()` 只在 `openGate()`/`sleepGate()` 里调用，**永不返回的动作永远不会被测到**；
-> ③ 该机制整体受 `#if IOKITSTATS` 编译开关控制；
-> ④ **`IOPCIConfigurator.cpp` 全文对 `_configWorkLoop` 零引用** ⇒ 初始 `doConfigure()` **不在工作环里**。
-> **判定：信息增益不足，不写入、不执行。**
->
-> ✅ **新首选方案（零 EFI 改动）**：**USB4 隧道端口枚举对照** ——
-> 先**只读**证明插入 USB4/TB 设备确实改变**枚举集合**，再决定是否做两次引导对照。
-> ⚠️ 已按审核降级三处判据：**Windows 有 PCIe 隧道 ≠ macOS 早期也有**（Windows USB4 Connection Manager
-> 可能在 OS 接管后才建隧道）；**新设备的总线号不能推出 GP11 的精确 `Secondary/Subordinate`**
-> （仍需配置空间寄存器）；"仍卡 10 分钟 / 出现 end"**都不能**单独定论。
-> **阶段 0 结果（2026-10-17）**：快照 A 已采（42 功能 / 9 桥，实时注册表，未用旧 plan.json）；
-> **B 不可行** —— 手头无符合要求的设备（被问到的 D: 盘经核实是 `15B7:5009` NVMe 挂在**新出现的
-> `GPP1`（00:01.2）**下 = 内置 M.2；另一块 `SMI SM3350` 是 USB）。**按约定到此停止，不采购硬件。**
-> ⚠️ **平台状态**：那次 dGPU 消失的原因**已确认** —— 操作者当时切到了**集显模式**，现已切回
-> （`01:00.0` RTX 4050 已重新出现在 `00:01.1`/GPP0 之下）。重采基线（10-19）：
-> **44 功能 / 9 桥**，`BootConfig` 18/18、需求 27/27 全部逐字节自洽。
-> **三态对照**（R8 单 NVMe 混合 / A 集显 / A′ 混合双 NVMe）给出同一个规律：
-> **高端起始总线 = 低端最大已分配总线 + 96 + 1** ⇒ **96 条空洞是"大小不变量"，起点随下方分配移动**；
-> **`secondary=0x05` 这个具体数值已被证伪**，但**寄存器仍未读**，所以**不能**说这 96 条属于 GP11。
-> 由此登记一条**可证伪预测 P1**：将来合格的 USB4/雷电设备**应当**落在当前空洞 `0x06–0x65` 内，
-> 否则"独占连续预留"模型被证伪。
-> 🆕 **新的首选候选（仅提议，未批准、未执行）**：**GPU 模式单变量隔离** ——
-> A 与 A′ 之间**只差 GPU 模式**且**枚举集合确实变了**（44 vs 42 功能、GPP0 有/无子设备、总线 `0x01` 在用/不在用），
-> 满足"先证明它改变枚举集合"，且**零 EFI 改动、可逆（切回即可）、手头就有**（USB4 方案卡在缺外设）。
-> 判据 G-α/β/γ：集显模式下仍静默 ⇒ **dGPU 不是停点的必要条件**（整条 dGPU/BAR 轴大幅降权）；
-> 出现 `end` 或不同停点 ⇒ **dGPU 在场与否是分水岭**（但**必须复测**，先排除偶发/固件状态差异）。
-> ⚠️ 注意：当前基线仍比 Round 8 **多一块 NVMe**（`00:01.2`/GPP1），任何新引导与 Rounds 2/4/6/7 **不可逐字等同**。
-> 详见 [docs/10](docs/10-Round9候选实验设计.md) §7。
-> 观测渠道（限定表述）：**目前没有经过验证、在现有硬件与工具条件下可用的早期内核取证通道**
-> （无串口、kdp 不可用、屏幕在该函数内被关闭；`ApplePanic → OpenCore 日志` 通道存在，但只在真 panic 后才产出）。
-> 详见 [docs/10](docs/10-Round9候选实验设计.md) §6。
->
-> 🔐 **历史泄漏的处置方案（仅方案）**：审计分类为 **完整明文 UUID 0 / 字节序变换 4 / 仅前缀 1**；
-> 因此准备 [仅轮换 SystemUUID 的独立方案](docs/11-SystemUUID仅轮换方案.md) ——
-> **不换**序列号/MLB/ROM，**不改写历史**、**不 force-push**。
-
-> **为什么不是"先加 PCI 日志"**：本轮独立核查了上游 `apple-oss-distributions/IOPCIFamily` 的
-> 全部 tag —— `pci_log` / `pci_log_mode` / `pci_log_rc` **只存在于 726.x 系列（macOS 26 时代）**，
-> 而 macOS 15.6 时代的 tag（≤ `681.140.3`，2025-08-20）**全都没有**；
-> 本项目此前引用的本地源码 **sha256 与 `IOPCIFamily-726.0.5` 逐字节相同**，
-> 即被误当成了 15.6 的代码。⇒ 在实机上追加 `pci_log=…` 是**空操作**，该候选**已撤销**。
-> 同时确认本机**没有**串口 / `kdp` / 任何"硬卡死后仍能取回内核输出"的通道，
-> 唯一可用的采集方式仍是**拍照 + 停留时长**。完整审计见 docs/06 §7。
-
-> **判据修正（2026-10-13 批准时要求）**：
-> ① 出现 `EB.MM.AKM`/`STOP 0x16` 等早期错误，**只**说明该设置影响了内存映射或启动兼容性，
-> **不能**据此推断固件运行期访问了某块 MMIO，**不能**据此确定 `MmioWhitelist` 地址；
-> ② OpenCore DEBUG 日志是早期错误的主要证据来源，**但不保证硬卡死时都能完整写盘** ——
-> 缺日志时仍须结合屏幕照片判断。
-
-**本轮只读作业的三条硬结论**（完整证据见 `docs/06`）：
-
-1. **三个 `AE_ALREADY_EXISTS` 已完整闭环**：`\_SB.PCI0.GPP6.WLAN._DSM` 由**DSDT 自己**提供
-   （`dsdt.dsl:15556`），固件 SSDT `WLAN` 重复定义它而中止；那次中止留下的
-   `\_SB.PCI0.GPP6._S0W`（Method）又让固件 SSDT `GpMsSsdt` 的 `Name (_S0W, Zero)` 撞车；
-   本项目注入的 `SSDT-Disable_Network_GPP6` 撞的是同一个 `_DSM`，
-   **因此它是"可证明不可能生效"的注入（D6 升级）**。这三张表都**不创建任何设备节点**
-   （`Device (` 计数为 0），删不掉任何 PCI 设备。
-2. **`SSDT-PLUG-ALT` 与本机固件无命名冲突，但多出 16 个 CPU 对象**：固件自带
-   `SSDT:CPUSSDT` 的 `\_SB.PLTF.C000..C00F`（`ACPI0007`），注入表又在 `\_SB` 下加了
-   16 个 `Processor (C000..C00F)`。作用域不同 → 无 `AE_ALREADY_EXISTS`；但命名空间里
-   有 32 个 `ACPI0007` 节点，说明这个 `-ALT` 版对本机是**冗余**的。
-3. **RTX 4050 的 BAR 不能再当"已确立变量"**：`OCDM: RBAR 2/3 … from 13 to 6` 是
-   **8 GiB → 64 MiB**（索引 n = 2^n MB），但紧接的 `Old BAR` 与 `New BAR` **六个数完全相同**，
-   并打印 `Reprogrammed BARs to original - Success` —— BAR **地址**被恢复成固件原值，
-   而**尺寸位不在这六个 dword 里**。所以"macOS 最终看到多大 BAR1"**无法由本机日志判定**；
-   Windows 报的 8 GiB 只能算旁证。
+> **English TL;DR** — A complete, booted-and-verified OpenCore EFI for the ASUS TUF
+> Gaming A14 (FA401UU): Ryzen 7 8845H + RTX 4050 Laptop + MT7922, running macOS 15
+> Sequoia with the NullMoth NVIDIA driver. `EFI/` is the exact tree that boots on this
+> unit; the SMBIOS identity fields are zeroed, so generate your own before use.
+> `docs/` holds the full investigation log (Chinese).
 
 ---
 
-## 快速上手
+## ⚠️ 用之前必须知道的三件事
 
-本项目**不重新分发任何第三方二进制**（驱动包 / kext / OpenCore 发行版），需要用 1401 现场生成：
+1. **SMBIOS 身份字段是全零占位符**（`SystemSerialNumber` / `MLB` / `SystemUUID` / `ROM`）。
+   直接刷这套 EFI 会有各种怪问题。请用 1401 对**本机**重新生成一套，或自己填一套
+   互不相同的值。**不要多人共用同一套 SMBIOS —— 会让 iMessage / iCloud 掉线。**
+2. **这套配置为了跑起来牺牲了大量安全性**：`csr-active-config = 0x0A43`（放宽 SIP）、
+   `amfi=0x80` + `amfi_get_out_of_my_way=0x1`（旁路 AMFI 签名校验）、
+   `SecureBootModel = Disabled`。**不要拿它当处理敏感数据的主力机。**
+3. **内屏是独显直连**（MUX）。如果 NVIDIA 驱动没起来，内屏就是黑的或只剩文字界面。
+   救急工具在 OpenCore 菜单里（见 [卡死处置](#卡死处置症状--怎么办)）。
 
-1. 用 [1401](https://github.com/nullmoth/1401) 的「Check this PC」扫描本机 → 得到 `Report.json` + ACPI 转储
-2. 用 1401 构建 EFI（会自带 AMD Vanilla 补丁、`ProvideCurrentCpuInfo` 等），然后按下表叠加本项目验证过的改动
-3. 写入 U 盘：`1401` 的 Mac App 或 `p1401.usbwriter`
-4. BIOS：**Above 4G Decoding / Resizable BAR 无需手动开**（华硕对 Ryzen 5000+ 默认开启且不显示该选项；
-   实测 `nvidia-smi` 报 `BAR1 = 8192 MiB` 即为已开启）。Secure Boot 关、CSM 关即可。
-5. 引导：开机连按 Esc → 选 U 盘 → OpenCore 里选 `1401 (external) (dmg)`
+---
 
-### 本项目已验证的配置改动（叠加在 1401 的构建结果上）
+## 现在到底能用什么
 
+实测结论。"证据"列写的是本仓库里能复查的出处。
+
+| 功能 | 状态 | 证据 / 说明 |
+|---|---|---|
+| 开机进系统 | ✅ | OpenCore 菜单 → macOS，可日常使用 |
+| 内屏 + 显卡加速 | ✅ | NullMoth NVIDIA 驱动 2.3.6，`NVRMFB/NVAccel/NVRM` 加载；**冷启动有小概率卡 BAR1，见下** |
+| CPU 16 线程 | ✅ | `AppleACPICPU ProcessorId=0..15 Enabled`，无 `cpus=1` |
+| 声音（ALC256） | ✅ | AppleALC，`layout-id = 97` |
+| 亮度键 / 音量键 | ✅ | BrightnessKeys |
+| 键盘 | ✅ | VoodooPS2Controller（PS/2 接口） |
+| 电池百分比 / 电源 | ✅ | SMCBatteryManager + `SSDT-ADP1`（伪装 AC，修 USB-C PD 显示） |
+| 触摸板 | ⚠️ | VoodooI2C + VoodooGPIO + VoodooI2CHID 已注入并加载，多指手势未逐个验收 |
+| 蓝牙 | ⚠️ | `SimpleMtkBtFw` 已匹配本机 `0489:e0f6`，配对/传输未实测 |
+| Wi-Fi | ⚠️ | `itlmt7922` 实验驱动：**能连、能跑 866 Mbps，但高负载约 1 小时后固件 coredump 掉线** |
+| 有线网络 | ❌ | 本机无 RJ45。USB 网卡只认 **RTL8153** 类；RTL8156 不认 |
+| 安卓 USB 共享 | ⚠️ | HoRNDIS 9.3 已注入，macOS 能识别出网络服务但链路起不来（`status: inactive`），未打通 |
+| 读卡器 | ⚠️ | Sinetek-rtsx |
+| 睡眠 / 唤醒 | ❌ 未验证 | NVIDIA 驱动与本配置都没做过睡眠验收，建议先禁用睡眠 |
+| AirDrop / 接力 / 通用控制 | ❌ | 依赖原生 Wi-Fi 卡，MT7922 没有 |
+| iMessage / FaceTime | ❌ | 需要真实三码 + 原生 Wi-Fi，这里都没有 |
+
+---
+
+## 快速上手（已经有本机 Win/macOS 双系统的人）
+
+```text
+1. 挂载 ESP，把本仓库 EFI/ 整个复制进去（ESP 根只剩 EFI/ 一个目录）
+2. 用 1401 重新生成你自己的 SMBIOS 三码，替换 EFI/OC/config.plist 里
+   PlatformInfo → Generic 的 SystemSerialNumber / MLB / SystemUUID / ROM
+3. 重启 → Esc 选 OpenCore
 ```
-NVRAM.Delete[7C436110-...]     += boot-args   ← 第一轮：让下面的 boot-args 真正生效
-boot-args    ... npci=0x2000
-Misc.Security.DmgLoading              = Any          （跳过慢速 DMG 校验）
-Booter.Quirks.DevirtualiseMmio        = True         （= 最后一次实测值；曾误设 False，未验证）
-Booter.Quirks.SetupVirtualMap         = True
-Booter.Quirks.RebuildAppleMemoryMap   = False
-Booter.Quirks.EnableWriteUnprotector  = True
-Booter.Quirks.SyncRuntimePermissions  = False
-Booter.Quirks.ResizeAppleGpuBars      = 0            （安装器专用，N 卡大 BAR 会顶掉固件帧缓冲）
-Booter.Quirks.ResizeGpuBars           = 缺省(-1)     （不改 BAR）
-Kernel.Quirks.ProvideCurrentCpuInfo   = True
-Kernel.Add                            26 个 kext（含注入的 HoRNDIS，见下）
+
+从零开始的完整流程见 [安装手册](docs/02-安装手册.md)；下面只写**这次真正成功用的那条路**。
+
+---
+
+## 怎么装（从零复现）
+
+### 0. 前置
+
+- 一块能当引导介质的盘：本项目最后用的是**内置 ESP**（12 GB），不是 U 盘
+  （USB 盘在反复写入中把桥接芯片写死过两次，不建议）
+- Windows 侧：`1401` v2.3.6 + 一个能联网的环境（下载 kext / 驱动）
+- 一个能读写的 **exFAT** 分区给安装器用（本次 26 GB）——原因见 §3
+
+### 1. 用 1401 生成 EFI 并写引导介质
+
+1401 会扫描本机 ACPI/PCI 生成一份 EFI，并按哈希拉取 kext。它内置的 OpenCore 是
+**DEBUG** 构建（会往 ESP 写 `opencore-*.txt` 日志，排错很有用）。
+
+生成后写到内置 ESP：`usbwriter write <disk> <efi目录> <darwin大版本>`，
+例如 `... 24` 表示 Sequoia（**不是** `--macos 15`）。写完整盘会被格式化，注意别选错盘。
+
+### 2. 叠加本项目验证过的改动
+
+| 位置 | 改动 | 为什么 |
+|---|---|---|
+| `Kernel → Patch` | 启用 `CaseySJ \| IOPCIIsHotplugPort \| Fix PCI bus enumeration on AM5 \| 13.0+` | **这才是 `[PCI configuration begin]` 卡死的真正解药** |
+| `ACPI → Delete` | 删 `IVRS` | 同上，AMD IOMMU 表冲突 |
+| `Kernel → Quirks` | `DisableIoMapper` / `DisableIoMapperMapping` = true | 同上 |
+| `boot-args` | `npci=0x3000` | 辅助；**单独去掉它会 100% 丢包**，别删 |
+| `Kernel → Add` | 追加 `HoRNDIS.kext`（TomHeaven 9.3 分支） | 安卓 USB 共享（本次未打通） |
+| `Kernel → Add` | 追加 `itlmt7922.kext` + `itl_lvl=2 itl_amsdu=0` | MT7922 Wi-Fi，见下 |
+| `Misc → Tools` | `NullMothSafe.efi` 两条 | NVIDIA 驱动卡死时的救急入口 |
+
+`npci=0x2000` 那条是网上流传最广的偏方，**在本机从未真正生效**——详细证伪过程见
+[引导排错实录](docs/03-引导排错实录.md)。
+
+### 3. 装 macOS —— 离线安装的两个坑（本项目最重要的贡献）
+
+没有可用网络时，macOS 安装器要**本地完整安装包**才装得下去。做法是把 Apple 的
+`InstallAssistant.pkg` 拆成两半放到 exFAT 上，在恢复模式终端里跑 `startosinstall`：
+
+```text
+/Volumes/MACINSTALL/
+├── SharedSupport.dmg     ← 苹果原版 InstallAssistant.pkg「改名」，不解压
+└── app.tar               ← 安装器 .app（952 条目 / 25 个符号链接，tar 保住符号链接）
 ```
 
-`efi/config.plist` 是**与卡上完全一致**的那份配置（只抹除了 SMBIOS 身份字段，见下）。
+**坑 1：`SharedSupport.dmg` 必须是整个 pkg，不能是解出来的裸 dmg。**
 
-> ⚠️ 注意 `NVRAM → Delete` 的一个设计行为：当变量**同时在 `Delete` 和 `Add`** 里，
-> OpenCore 会比较二者内容，**相同就不删**（打印 `Not deleting NVRAM … matches add`）以保护 Flash 寿命。
-> 所以正确的值稳定之后，日志反而会一直显示 `ignored, exists` —— 那是**证明值正确**，不是没生效。
+安装器 `OSInstallerSetupInternal` 里的逻辑是：
 
-### 安装期的联网（本机特有难点）
+```text
+Will verify dmg as pkgdmg.
+Getting offset for dmg in pkg: %s        ← 读 xar 的 data/offset、data/length
+pkgdmg is missing a footer.
+pkgdmg validation has failed.
+→ Operation failed - OSISVerifyBaseSystemOperation
+→ 错误 255「安装无法继续，因为安装器已损坏」
+```
 
-无 RJ45 口 + MT7922 无驱动 + RTL8156 型 USB 网卡在 macOS 下无原生支持（它以厂商自定义类 0xFF 枚举，
-不是 CDC-ECM）→ 安装器里没网。本项目注入 **HoRNDIS**（`TomHeaven/HoRNDIS` 9.3，x86_64 切片、仅依赖原生 IOKit）
-以支持**安卓手机 USB 共享网络**；备选是 RTL8153 芯片的 USB 网卡（macOS 自带 `AppleUSBRealtek8153Patcher`）。
+正确的文件就是 `InstallAssistant.pkg` 本身：头 4 字节 `78 61 72 21`（`xar!`）、
+文件末尾那 512 字节的开头是 `6b 6f 6c 79`（`koly`）、大小 15,655,501,868 B。
+从 pkg 里解出来的"纯 dmg"头是 FAT32 引导扇区（`eb 58 90 …`），会被判为无效。
+
+**坑 2：`startosinstall --nointeractive` 在 macOS 13 之后被删除了。**
+
+现在等价的是 `--forcequitapps`，传旧参数会得到 `unrecognized option` + 退出码 64。
+
+最终可用的命令：
+
+```sh
+"/Volumes/INSTAPP/Install macOS Sequoia.app/Contents/Resources/startosinstall" \
+    --volume /Volumes/MACOS \
+    --agreetolicense --forcequitapps
+```
+
+安装器 `.app` 的符号链接必须保住：这里用 `tar` 打包再在 APFS 上解开
+（exFAT 不支持符号链接，直接拷会把 `IAESD.framework`、`Versions/Current` 等 25 个链接
+变成普通文本文件，`startosinstall` 连 dyld 都过不去）。
+`Contents/SharedSupport/SharedSupport.dmg` 用**符号链接**指向 exFAT 上的 pkg，省掉 15 GB 拷贝。
+
+### 4. 装完之后
+
+1. 从 ESP 里拿出 `NullMoth\1401-Mac-2.3.6.zip`，把 `1401.app` 拖到 `/Applications` 再运行
+   （**不要在 exFAT 上直接跑**），它会装 NVIDIA 驱动到 `/Library/Extensions/` 并注册两条救急工具
+2. 重启
+3. 用 1401 重新生成并写入你自己的 SMBIOS 三码
+
+---
+
+## EFI 目录说明
+
+```text
+EFI/
+├── BOOT/BOOTx64.efi
+└── OC/
+    ├── ACPI/          7 张 SSDT
+    ├── Drivers/       HfsPlus / OpenRuntime / ResetNvramEntry
+    ├── Kexts/         22 个 kext（29 条 Kernel/Add，含 4 条 PlugIns 子项）
+    ├── Resources/     OpenCanopy GoldenGate 主题 + 字体（3.5 MB）
+    ├── Tools/         NullMothSafe.efi（NVIDIA 驱动救急）
+    ├── OpenCore.efi
+    └── config.plist   ← 已脱敏，SMBIOS 四字段为零
+```
+
+ACPI 表：`SSDT-EC`、`SSDT-PLUG-ALT`、`SSDT-USB-Reset`、`SSDT-USBX`、`SSDT-XOSI`、
+`SSDT-ADP1`（伪装 AC）、`SSDT-ROG`；配套 `ACPI → Patch` 的 `_OSI → XOSI` 重命名。
+
+---
+
+## 关键参数的来历（逐条）
+
+### boot-args
+
+```text
+-v debug=0x100 keepsyms=1     # 详细模式 + 内核符号，排错用；稳定后可去掉
+nvfb=1 nvaccel=1 nvfbheads=4  # NullMoth 驱动必需（帧缓冲 / 加速 / 头数）
+-nvkmsnosmooth                # NullMoth：关掉平滑缩放，修闪屏
+amfi_get_out_of_my_way=0x1 amfi=0x80   # 旁路 AMFI，第三方 kext 才加载得起来
+ipc_control_port_options=0    # 修部分场景的进程间通信 panic
+gfxrst=4                      # NullMoth：GPU 复位档位
+npci=0x3000                   # 辅助 PCI 枚举；单独去掉会 100% 丢包，别删
+itl_lvl=2 itl_amsdu=0         # itlmt7922：降档 + 关 A-MSDU，缓解固件崩溃
+```
+
+> ⚠️ **绝对不要加 `nvfbhidpi=1`。** 它会让冷启动卡死在
+> `NVNe: bar1: placing BAR1 8192 MB …`，而且"改完当时没事、下次开机才炸"。
+> 详见 [卡死处置](#卡死处置症状--怎么办)。
+
+### Kernel / Booter quirks（只列真正起作用的）
+
+| 位置 | 项 | 说明 |
+|---|---|---|
+| Booter | `RebuildAppleMemoryMap` / `SetupVirtualMap` / `SyncRuntimePermissions` / `DevirtualiseMmio` / `ProvideCustomSlide` / `AvoidRuntimeDefrag` | AMD 交接内存映射这一组必须一起给 |
+| Booter | `AllowRelocationBlock` / `FixupAppleEfiImages` / `DisableVariableWrite` | 1401 生成；修 EFI 镜像与 NVRAM 写 |
+| Kernel | `DisableIoMapper` / `DisableIoMapperMapping` | 关 IOMMU 映射，配 `ACPI Delete IVRS` |
+| Kernel | `ProvideCurrentCpuInfo` | AMD 必需的 CPU 信息伪造 |
+| Kernel | `CustomSMBIOSGuid` | 自定义 SMBIOS |
+| Kernel | `DisableRtcChecksum` / `SetApfsTrimTimeout=-1` | RTC 校验、APFS TRIM |
+| Kernel | `PanicNoKextDump` / `PowerTimeoutKernelPanic` | 少 panic 现场，纯减噪 |
+
+### Kernel → Patch
+
+27 条，全部来自 [AMD_Vanilla](https://github.com/AMD-OSX/AMD_Vanilla)
+（algrey / CaseySJ / Visual / Goldfish64 / laobamac / Zormeister），覆盖 Zen 4 的 CPUID、
+`rdmsr`/`wrmsr`、`cpuid_cores_per_package`、PAT、非单调时间 panic。
+**其中 `CaseySJ | IOPCIIsHotplugPort | Fix PCI bus enumeration on AM5` 是本机 PCI 卡死的真正解药。**
+
+### DeviceProperties
+
+```text
+PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x0)  disable-gpu: true   ← 屏蔽 Radeon 780M（macOS 无驱动）
+PciRoot(0x0)/Pci(0x8,0x1)/Pci(0x0,0x6)  layout-id: 97       ← ALC256
+PciRoot(0x0)/Pci(0x1,0x1)/Pci(0x0,0x0)  acpi-wake-type: 1   ← 唤醒类型
+```
+
+---
+
+## 卡死处置（症状 → 怎么办）
+
+| 症状 | 结论 | 处置 |
+|---|---|---|
+| 卡 `[PCI configuration begin]` | PCI 总线枚举死锁 | 启用 `CaseySJ IOPCIIsHotplugPort` 补丁 + 删 `IVRS` + `DisableIoMapper` |
+| 卡 `NVNe: bar1: placing BAR1 8192 MB …` | NullMoth 驱动重排 root port 的 64 位窗口时挂住（**冷启动**最容易触发） | OpenCore 菜单 → **`1401: Start once without NVIDIA driver`**（只这次不加载驱动）；反复出现就用 **`1401: Remove NVIDIA driver`** |
+| Wi-Fi 连上一小时后掉线、之后一直「连接失败」 | 固件 coredump，芯片进死状态，驱动自恢复失败 | **彻底断电**（关机 → 拔电源 → 长按电源 10 s → 开机），单纯重启不够 |
+| 睡眠后黑屏 / 醒不过来 | NVIDIA 驱动未验收睡眠 | 装完先去「系统设置」把睡眠关掉 |
+
+> 冷启动比热重启更容易踩 BAR1 那条。**尽量用重启而不是关机**，能躲掉大部分情况。
+
+---
+
+## Wi-Fi（实验驱动：能连，但不稳）
+
+本机 Wi-Fi 是 **MediaTek MT7922 / RZ616**（`14c3:0616`），macOS 没有原生驱动。
+本项目用的是社区实验驱动 [itlmt7922 v0.2.2](https://github.com/hbyonly1/itlmt7922-wifi)
+（x86_64 / macOS 15，作者实测硬件正是 `14c3:0616`）。
+
+**实测结论（来自驱动自己的 ioreg 日志）**：
+
+```text
+固件加载   stage1→stage9 全过，FIRMWARE READY MISC=00000003
+扫描       CE scan done=1 ms=2925 aps=10 / aps=14
+握手       auth status=0 → assoc status=0 aid=25 → eapol m1/m2/m3/m4 micBad=0
+           → key_v2(ptk/gtk) rc=0 → RESULT rc=0 link up
+速率       ch=161 bw=2 nss=2 rate~866   (5 GHz / 80 MHz / 2 流)
+稳定段     up=3835s  rxd=357840  tx=319444  fail=0
+然后崩了   3920s lost after 3847s at lvl 3: firmware coredump
+崩后       recover: M1 rc=-5 → 每次扫描 CE scan submit rc=-110（超时）
+```
+
+也就是说：**能连、能跑满 866 Mbps，但持续高负载约 1 小时后固件会 coredump，
+之后芯片不再响应，只能断电恢复。** 这是驱动/固件稳定性问题，不是配置问题。
+
+已做的缓解（都在 `EFI/OC/config.plist` 里）：`itl_lvl=2` 降档、`itl_amsdu=0` 关 A-MSDU。
+还可以加 `itl_no160=1`（关 160 MHz）、`itl_reo=0`（关重排）、`itl_pwr=N`（发射功率）。
+
+**如果 Wi-Fi 是刚需，别赌这个驱动。** 本机没有 RJ45，四条现实路径：
+
+| 方案 | 成本 | 稳定性 |
+|---|---|---|
+| **USB-A 千兆网卡，认准 RTL8153** | ~¥20 | ✅ macOS 原生免驱，插上就用 |
+| 换 Wi-Fi 卡（Intel AX210 + itlwm / BCM94360NG） | ¥60~150 + 拆机 | ✅ 成熟方案；Intel 卡没有原生 AirDrop |
+| 手机 USB 共享（HoRNDIS） | 免费 | ⚠️ 本机未打通 |
+| 等 itlmt7922 上游修 | 免费 | ❌ 目前不适合日常 |
 
 ---
 
 ## 仓库结构
 
+```text
+EFI/                    完整可引导 EFI（143 文件 / 14 MB，config 已脱敏）
+hardware/               本机配置摘要
+docs/                   完整调查过程（中文，按轮次）
+  01-可行性评估.md
+  02-安装手册.md         ← 从零安装步骤
+  03-引导排错实录.md     ← "PCI configuration begin" 的完整证伪与解法
+  04-驱动核对.md         ← 逐个 kext 的架构/依赖审计
+  05-受控实验记录.md
+  06 / 07 / 10           候选方案与实验设计
+  08-RTX4050-BAR与PCI资源审计.md
+  09-Linux-Live只读采集方案.md
+  11-SystemUUID仅轮换方案.md
+  12-候选配置说明.md
+audit/                  PCI 资源 / 日志配置审计脚本与结果
+logs/                   真实 OpenCore 引导日志（已脱敏）
+scripts/                同步、脱敏、配置叠加等脚本
+NOTICE.md               第三方组件与许可
 ```
-README.md                        本文件
-docs/01-可行性评估.md             项目可行性、硬件逐项判定、已知风险
-docs/02-安装手册.md               完整操作手册（BIOS/分区/驱动安装/风险对策）
-docs/03-引导排错实录.md            ★ 每次引导卡死的证据、根因、解法（含勘误）
-docs/04-驱动核对.md               kext 逐个审计（版本/架构/顺序/依赖）
-docs/05-受控实验记录.md            ★ 当前在测什么：实验设计、精确 diff、判据、回滚
-docs/06-只读分析与Round5候选.md    ★ 只读 ACPI/PCI 分析、上游案例复核、Round 5 候选（只给 diff）
-docs/07-上游案例复核与Round6候选.md ★ Round 5B 结案与回滚、Acer 案例复核、IOPCIFamily-681 标志位、1401 版本策略对比、Round 6 候选
-docs/08-RTX4050-BAR与PCI资源审计.md  ★ RTX 4050 BAR1 专项（BDF/地址/尺寸/RBAR 解码/读回手段）、PCI root bridge 与 _CRS 审计、Round 7 定稿、Round 8 Windows 侧 PCI 拓扑与资源只读审计
-docs/09-Linux-Live只读采集方案.md   ★ Linux Live 只读采集预案（桥寄存器级证据；按条件执行，本轮未执行）
-docs/10-Round9候选实验设计.md       ★ Round 9 撤销与重规划：四条判据作废 + 观测渠道清单 + 新首选（USB4 枚举对照，零 EFI 改动）
-docs/11-SystemUUID仅轮换方案.md      ★ 历史泄漏处置：分类结果（完整 UUID 4 blob）+ 仅轮换 SystemUUID 的影响评估（仅方案）
-audit/                           只读审计脚本 + 脱敏结果（什么入库/什么绝不入库见 audit/README.md）
-hardware/本机配置摘要.md           脱敏后的硬件清单
-efi/config.plist                 与卡上一致的配置（SMBIOS 身份已抹除）
-efi/README.md                    kext 清单与用 1401 重建的方法
-logs/opencore-*.txt              8 份真实 OpenCore 引导日志（已脱敏）
-logs/bootfix-findings.md         1401 诊断器对这些日志的判定
-efi/candidates/                  尚未写入卡上的候选方案（评审用；规则见其 README）
-scripts/sanitize-config.py       把卡上配置脱敏后搬进仓库（字节级保真）
-scripts/scrub-log.py             清洗引导日志里的身份值（含 UUID 字节序反转形式、磁盘序列号）
-scripts/sync-to-github.ps1       ★ 一键同步：双重脱敏 → ocvalidate → 泄漏扫描 → push → 远端复核
-scripts/read-screen-photo.py     把手机拍的启动画面裁切放大以读清文字
-scripts/patch-stick-config.py    免提权、直接改 U 盘上 config.plist 的小工具
-scripts/rewrite-stick-as-admin.cmd  提权重写 U 盘的模板脚本
-```
-
-### 每次修改后同步到 GitHub
-
-仓库必须**始终反映卡上真实状态**，否则"仓库配置 ≠ 实测配置"这个坑会再次出现。固定流程：
-
-```powershell
-.\scripts\sync-to-github.ps1 -Message "round1: ..."
-```
-
-它会依次执行：**脱敏**（把卡上 `D:\EFI\OC\config.plist` 的 4 个身份字段置零后写入 `efi/config.plist`，
-其余字节原样保留，所以 diff 只显示真实改动）→ **`ocvalidate`**（版本不符或报错就拒绝发布）→
-**泄漏扫描**（从卡上读出**真实**的序列号/MLB/UUID/ROM/MAC，在整仓搜索；同时拒绝 `Report.json`、
-`*.aml`、`*.bin`、`>1MB` 的文件）→ **push** → **把远端内容拉回来再扫一遍**。
 
 ---
 
-## 隐私说明
+## 第三方组件与许可
 
-公开前已抹除：`config.plist` 里的 SMBIOS `SystemSerialNumber` / `MLB` / `SystemUUID` / `ROM`，
-以及引导日志里的同一批值 + 网卡 MAC + 内置 NVMe 磁盘序列号。
-原始扫描报告（含网卡 MAC 与磁盘序列号）与 ACPI 转储**未收录**。
-`scripts/sanitize-config.py` / `scripts/scrub-log.py` / `scripts/sync-to-github.ps1`
-会在发布前自动完成脱敏与扫描，任一身份字段找不到就直接失败退出。
+本仓库**现在包含第三方二进制**（`EFI/OC/Kexts`、`EFI/OC/Tools`）。
+每个组件的上游、版本与许可见 [NOTICE.md](NOTICE.md)。要点：
 
-> **一处已修复的泄漏，留档说明**：最初发布的 4 份日志里残留了真实 SMBIOS UUID。
-> 两个原因：(1) OpenCore 打印 `system-id` 时把 GUID 前三个字段**字节序反转**，
-> 只搜配置里的原字符串会漏掉；(2) 当时的校验命令把
-> `Get-ChildItem | Select-String -Quiet` 的整条管道聚合成一个布尔值，误判为"已脱敏"。
-> 现已修正，并在同步脚本里加入字节序反转 UUID、GUID 尾段、未脱敏 `NVMe` 路径三类检查。
-> **注意：修复只作用于当前分支内容，旧提交历史里仍可追溯。**
+- **NullMoth NVIDIA 驱动 / 1401**：**PolyForm Noncommercial 1.0.0 —— 禁止商业使用**。
+  本仓库里的 `NullMothSafe.efi` 来自 1401，仅用于非商业的个人实验
+- **OpenCore**：BSD-3-Clause
+- **AMD_Vanilla 内核补丁**：只是 config 里的字节序列，来源 AMD-OSX/AMD_Vanilla
+- 各 kext 版权归各自作者；长期使用请到上游取最新版（[NOTICE.md](NOTICE.md) 有全部链接）
+- 若某上游作者不希望二进制出现在这里，开 issue，我会立即移除
 
-**直接使用 `efi/config.plist` 前请换成自己的序列号**（用 1401 重新生成即可），不要照抄示例里的占位值。
+---
 
-## 许可与致谢
+## 免责
 
-本项目自有内容（文档、脚本、配置）以 **MIT** 发布，见 [LICENSE](LICENSE)。
-**不包含**任何第三方二进制。第三方组件的归属与许可见 [NOTICE.md](NOTICE.md) ——
-特别是 **NullMoth NVIDIA 驱动为 PolyForm Noncommercial 1.0.0（禁止商业使用）**，本项目只链接、不分发。
+- 黑苹果（在非 Apple 硬件上运行 macOS）**违反 Apple 的软件许可协议**，本项目仅供研究与学习
+- 这套配置**显著降低系统安全性**（放宽 SIP、旁路 AMFI、关闭安全启动、SMBIOS 伪装）
+- 文档里的实测结论对应 **2026-10** 的版本（1401 v2.3.6 / OpenCore 内置 DEBUG 构建 /
+  itlmt7922 v0.2.2 / macOS 15.7.7），上游更新后可能不再适用
+- 照做导致的数据丢失、保修失效、硬件损坏，本项目不承担任何责任
 
-> 免责：黑苹果违反 Apple 软件许可协议，仅供研究。本仓库的配置会降低系统安全性
-> （放宽 SIP、旁路 AMFI、关闭安全启动），请勿用于处理敏感数据的主力机。
+---
+
+## 变更记录（本轮）
+
+- ✅ **首次成功装进系统**：macOS 15.7.7 / 24G720，内屏 + NVIDIA 硬件加速可用
+- ✅ 打通离线安装：确认 `SharedSupport.dmg` 必须是整个 pkg（pkgdmg），
+  用 `startosinstall --forcequitapps` 替代已删除的 `--nointeractive`
+- ✅ 定位并修掉 `nvfbhidpi=1` 导致的冷启动 BAR1 死锁
+- ✅ 接入 MT7922 Wi-Fi（itlmt7922 v0.2.2），记录固件 coredump 的完整证据链与缓解参数
+- ✅ 上传完整 EFI（此前仓库只有一份 config.plist）

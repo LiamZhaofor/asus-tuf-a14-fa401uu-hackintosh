@@ -6,3 +6,7 @@
 *.plist text eol=lf
 *.txt  text eol=lf
 *.cmd  text eol=crlf
+
+# EFI 目录按二进制处理：*.efi / kext 可执行文件必须逐字节保真，
+# 不允许任何换行符转换（否则拷到 ESP 上和原来那份就不是同一个文件了）
+EFI/** -text
