@@ -74,6 +74,9 @@
 
 从零开始的完整流程见 [安装手册](docs/02-安装手册.md)；下面只写**这次真正成功用的那条路**。
 
+> 不想 clone 整个仓库？[**最新 Release**](https://github.com/LiamZhaofor/asus-tuf-a14-fa401uu-hackintosh/releases/latest)
+> 里有打好包的 `EFI-<日期>.zip`（同样是这份 `EFI/`，config 已脱敏）+ `SHA256SUMS.txt`。
+
 ---
 
 ## 怎么装（从零复现）
